@@ -1221,6 +1221,149 @@
   
   
   
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Packages
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Packages
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../packages/openvaf-py/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    openvaf-py
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../packages/osdi-py/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    osdi-py
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../packages/umfpack-jax/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    umfpack-jax
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
     <li class="md-nav__item">
       <a href="../ci-status/" class="md-nav__link">
         
@@ -1756,11 +1899,24 @@
 <td>Enable float64: <code>1</code> or <code>0</code></td>
 </tr>
 <tr>
+<td><code>VAJAX_MODEL_PATH</code></td>
+<td>Additional model search paths (colon-separated, <code>;</code> on Windows)</td>
+</tr>
+<tr>
+<td><code>VAJAX_CACHE_DIR</code></td>
+<td>Override cache directory (default: <code>~/.cache/vajax/</code>)</td>
+</tr>
+<tr>
+<td><code>VAJAX_NO_PROGRESS</code></td>
+<td>Set to <code>1</code> to disable progress bars</td>
+</tr>
+<tr>
 <td><code>NGSPICE_BIN</code></td>
 <td>Path to ngspice binary (for convert)</td>
 </tr>
 </tbody>
 </table>
+<p>See <a href="../configuration/">Configuration</a> for config file support and model search order.</p>
 <h2 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h2>
 <h3 id="transient-analysis">Transient Analysis<a class="headerlink" href="#transient-analysis" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># Basic transient simulation</span>
@@ -1816,6 +1972,7 @@
 </code></pre></div></p>
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
+<li><a href="../configuration/">Configuration</a> - Config files and model search paths</li>
 <li><a href="../README.md">README.md</a> - Getting started guide</li>
 <li><a href="../architecture_overview/">Architecture Overview</a> - System design</li>
 <li><a href="../gpu_solver_architecture/">GPU Solver Architecture</a> - Performance optimization</li>

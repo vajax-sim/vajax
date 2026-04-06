@@ -1132,6 +1132,149 @@
   
   
   
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Packages
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Packages
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../packages/openvaf-py/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    openvaf-py
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../packages/osdi-py/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    osdi-py
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../packages/umfpack-jax/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    umfpack-jax
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
     <li class="md-nav__item">
       <a href="../ci-status/" class="md-nav__link">
         
@@ -1381,17 +1524,15 @@
 Options can be specified in the netlist and are automatically used as defaults.</p>
 <h2 id="simplest-usage">Simplest Usage<a class="headerlink" href="#simplest-usage" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">vajax</span><span class="w"> </span><span class="kn">import</span> <span class="n">CircuitEngine</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">vajax.analysis.transient</span><span class="w"> </span><span class="kn">import</span> <span class="n">FullMNAStrategy</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">engine</span> <span class="o">=</span> <span class="n">CircuitEngine</span><span class="p">(</span><span class="s1">&#39;circuit.sim&#39;</span><span class="p">)</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">engine</span><span class="o">.</span><span class="n">parse</span><span class="p">()</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">engine</span> <span class="o">=</span> <span class="n">CircuitEngine</span><span class="p">(</span><span class="s1">&#39;circuit.sim&#39;</span><span class="p">)</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">engine</span><span class="o">.</span><span class="n">parse</span><span class="p">()</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">engine</span><span class="o">.</span><span class="n">prepare</span><span class="p">()</span>
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="n">strategy</span> <span class="o">=</span> <span class="n">FullMNAStrategy</span><span class="p">(</span><span class="n">engine</span><span class="p">)</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="c1"># Run with all defaults from netlist - no args needed!</span>
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="n">times</span><span class="p">,</span> <span class="n">V</span><span class="p">,</span> <span class="n">stats</span> <span class="o">=</span> <span class="n">strategy</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1"># Run with all defaults from netlist - no args needed!</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="n">result</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">run_transient</span><span class="p">()</span>
 </code></pre></div>
-<p>The <code>run()</code> method uses:
+<p>The <code>run_transient()</code> method uses:
 - <code>stop</code> from netlist analysis line as <code>t_stop</code>
 - <code>step</code> from netlist analysis line as <code>dt</code>
 - <code>tran_lteratio</code>, <code>nr_convtol</code>, etc. from netlist options</p>
@@ -1402,14 +1543,13 @@ Options can be specified in the netlist and are automatically used as defaults.<
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nx">analysis</span><span class="w"> </span><span class="nx">top</span><span class="w"> </span><span class="nx">tran</span><span class="w"> </span><span class="nx">step</span><span class="p">=</span><span class="mi">1</span><span class="kd">p</span><span class="w"> </span><span class="nx">stop</span><span class="p">=</span><span class="mi">10</span><span class="nx">n</span>
 </code></pre></div>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">vajax</span><span class="w"> </span><span class="kn">import</span> <span class="n">CircuitEngine</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">vajax.analysis.transient</span><span class="w"> </span><span class="kn">import</span> <span class="n">FullMNAStrategy</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">engine</span> <span class="o">=</span> <span class="n">CircuitEngine</span><span class="p">(</span><span class="s1">&#39;circuit.sim&#39;</span><span class="p">)</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">engine</span><span class="o">.</span><span class="n">parse</span><span class="p">()</span>
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="c1"># Strategy automatically uses netlist options</span>
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="n">strategy</span> <span class="o">=</span> <span class="n">FullMNAStrategy</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">use_sparse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="c1"># strategy.config.lte_ratio == 1.5  (from tran_lteratio)</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">engine</span> <span class="o">=</span> <span class="n">CircuitEngine</span><span class="p">(</span><span class="s1">&#39;circuit.sim&#39;</span><span class="p">)</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">engine</span><span class="o">.</span><span class="n">parse</span><span class="p">()</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="c1"># prepare() automatically uses netlist options</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="n">engine</span><span class="o">.</span><span class="n">prepare</span><span class="p">(</span><span class="n">use_sparse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="c1"># engine.adaptive_config.lte_ratio == 1.5  (from tran_lteratio)</span>
 </code></pre></div>
 <h2 id="supported-options">Supported Options<a class="headerlink" href="#supported-options" title="Permanent link">&para;</a></h2>
 <h3 id="lte-local-truncation-error-control">LTE (Local Truncation Error) Control<a class="headerlink" href="#lte-local-truncation-error-control" title="Permanent link">&para;</a></h3>
@@ -1601,20 +1741,20 @@ Options can be specified in the netlist and are automatically used as defaults.<
 </tbody>
 </table>
 <h2 id="default-behavior">Default Behavior<a class="headerlink" href="#default-behavior" title="Permanent link">&para;</a></h2>
-<p>When no explicit <code>AdaptiveConfig</code> is passed to <code>FullMNAStrategy</code>:</p>
+<p>When no explicit <code>AdaptiveConfig</code> is passed to <code>engine.prepare()</code>:</p>
 <ol>
 <li><strong>Netlist options are parsed</strong> during <code>engine.parse()</code> and stored in <code>engine.analysis_params</code></li>
-<li><strong>Strategy builds config</strong> from <code>analysis_params</code> automatically</li>
+<li><strong><code>prepare()</code> builds config</strong> from <code>analysis_params</code> automatically</li>
 <li><strong>Defaults apply</strong> for any options not specified in the netlist</li>
 </ol>
 <p>Example with defaults:
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># No options in netlist - uses all defaults</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">strategy</span> <span class="o">=</span> <span class="n">FullMNAStrategy</span><span class="p">(</span><span class="n">engine</span><span class="p">)</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">engine</span><span class="o">.</span><span class="n">prepare</span><span class="p">()</span>
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="c1"># lte_ratio=3.5, redo_factor=2.5, reltol=1e-3, etc.</span>
 </code></pre></div></p>
 <h2 id="programmatic-override">Programmatic Override<a class="headerlink" href="#programmatic-override" title="Permanent link">&para;</a></h2>
 <p>Explicit <code>AdaptiveConfig</code> completely overrides netlist options:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">vajax.analysis.transient</span><span class="w"> </span><span class="kn">import</span> <span class="n">AdaptiveConfig</span><span class="p">,</span> <span class="n">FullMNAStrategy</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">vajax.analysis.transient</span><span class="w"> </span><span class="kn">import</span> <span class="n">AdaptiveConfig</span>
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
 <a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="c1"># Override specific options</span>
 <a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="n">config</span> <span class="o">=</span> <span class="n">AdaptiveConfig</span><span class="p">(</span>
@@ -1622,7 +1762,7 @@ Options can be specified in the netlist and are automatically used as defaults.<
 <a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>    <span class="n">tran_fs</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>        <span class="c1"># Even smaller initial timesteps</span>
 <a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>    <span class="n">debug_steps</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>   <span class="c1"># Enable per-step debugging</span>
 <a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="p">)</span>
-<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="n">strategy</span> <span class="o">=</span> <span class="n">FullMNAStrategy</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="n">engine</span><span class="o">.</span><span class="n">prepare</span><span class="p">(</span><span class="n">adaptive_config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
 </code></pre></div>
 <h2 id="vacask-compatibility">VACASK Compatibility<a class="headerlink" href="#vacask-compatibility" title="Permanent link">&para;</a></h2>
 <h3 id="supported-functional">Supported (Functional)<a class="headerlink" href="#supported-functional" title="Permanent link">&para;</a></h3>
@@ -1742,9 +1882,9 @@ Options can be specified in the netlist and are automatically used as defaults.<
 <a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">engine</span><span class="o">.</span><span class="n">parse</span><span class="p">()</span>
 <a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
 <a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1"># These options are automatically applied</span>
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="n">strategy</span> <span class="o">=</span> <span class="n">FullMNAStrategy</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">use_sparse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="k">assert</span> <span class="n">strategy</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">lte_ratio</span> <span class="o">==</span> <span class="mf">1.5</span>
-<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="k">assert</span> <span class="n">strategy</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">nr_convtol</span> <span class="o">==</span> <span class="mf">1.0</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="n">engine</span><span class="o">.</span><span class="n">prepare</span><span class="p">(</span><span class="n">use_sparse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="k">assert</span> <span class="n">engine</span><span class="o">.</span><span class="n">adaptive_config</span><span class="o">.</span><span class="n">lte_ratio</span> <span class="o">==</span> <span class="mf">1.5</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="k">assert</span> <span class="n">engine</span><span class="o">.</span><span class="n">adaptive_config</span><span class="o">.</span><span class="n">nr_convtol</span> <span class="o">==</span> <span class="mf">1.0</span>
 </code></pre></div>
 
 

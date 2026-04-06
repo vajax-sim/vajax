@@ -11,10 +11,6 @@
       
       
       
-        <link rel="prev" href="../architecture_overview/">
-      
-      
-        <link rel="next" href="../gpu_solver_architecture/">
       
       
         
@@ -25,7 +21,7 @@
     
     
       
-        <title>Parallelism Architecture - VAJAX</title>
+        <title>Configuration - VAJAX</title>
       
     
     
@@ -76,7 +72,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#parallelism-architecture-c6288-case-study" class="md-skip">
+        <a href="#configuration" class="md-skip">
           Skip to content
         </a>
       
@@ -112,7 +108,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Parallelism Architecture
+              Configuration
             
           </span>
         </div>
@@ -537,8 +533,6 @@
       
   
   
-    
-  
   
   
     
@@ -551,11 +545,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
         
           
           <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
@@ -576,7 +570,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -619,37 +613,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Parallelism Architecture
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../parallelism_architecture/" class="md-nav__link">
         
   
   
@@ -665,142 +632,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#circuit-overview" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Circuit Overview
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#end-to-end-pipeline" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        End-to-End Pipeline
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#newton-raphson-iteration-detail" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Newton-Raphson Iteration Detail
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#where-parallelism-happens" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Where Parallelism Happens
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#parameter-splitting-shared-vs-per-device" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Parameter Splitting: Shared vs Per-Device
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#coo-stamping-and-assembly" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        COO Stamping and Assembly
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#sparse-solver-path" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Sparse Solver Path
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#transient-time-stepping-loop" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Transient Time-Stepping Loop
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#performance-profile" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Performance Profile
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Performance Profile">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#scale-comparison-benchmarks" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Scale Comparison: Benchmarks
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1262,10 +1093,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#circuit-overview" class="md-nav__link">
+  <a href="#config-files" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Circuit Overview
+        Config Files
       
     </span>
   </a>
@@ -1273,99 +1104,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#end-to-end-pipeline" class="md-nav__link">
+  <a href="#config-schema" class="md-nav__link">
     <span class="md-ellipsis">
       
-        End-to-End Pipeline
+        Config Schema
       
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#newton-raphson-iteration-detail" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Newton-Raphson Iteration Detail
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#where-parallelism-happens" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Where Parallelism Happens
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#parameter-splitting-shared-vs-per-device" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Parameter Splitting: Shared vs Per-Device
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#coo-stamping-and-assembly" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        COO Stamping and Assembly
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#sparse-solver-path" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Sparse Solver Path
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#transient-time-stepping-loop" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Transient Time-Stepping Loop
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#performance-profile" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Performance Profile
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Performance Profile">
+    <nav class="md-nav" aria-label="Config Schema">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#scale-comparison-benchmarks" class="md-nav__link">
+  <a href="#models-search-paths" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Scale Comparison: Benchmarks
+        [models] — Search Paths
       
     </span>
   </a>
@@ -1374,6 +1128,117 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#environment-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environment Variables
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Environment Variables">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#model-paths" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Model paths
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#other-environment-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Other environment variables
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#search-order" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Search Order
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#point-to-a-local-pdk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Point to a local PDK
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#use-vacask-models-from-a-separate-install" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Use VACASK models from a separate install
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#temporary-override-for-a-single-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Temporary override for a single run
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#programmatic-access" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Programmatic Access
+      
+    </span>
+  </a>
   
 </li>
       
@@ -1397,352 +1262,120 @@
   
 
 
-<h1 id="parallelism-architecture-c6288-case-study">Parallelism Architecture: c6288 Case Study<a class="headerlink" href="#parallelism-architecture-c6288-case-study" title="Permanent link">&para;</a></h1>
-<p>This document traces how VAJAX exploits parallelism at every stage of circuit
-simulation, using the c6288 16x16 combinational multiplier as a concrete example.</p>
-<h2 id="circuit-overview">Circuit Overview<a class="headerlink" href="#circuit-overview" title="Permanent link">&para;</a></h2>
-<p>The c6288 circuit is a 16-bit Wallace-tree multiplier:</p>
-<ul>
-<li><strong>256 AND gates</strong> (6 MOSFETs each: 3 PMOS + 3 NMOS)</li>
-<li><strong>2,128 NOR gates</strong> (4 MOSFETs each: 2 PMOS + 2 NMOS)</li>
-<li><strong>10,048 PSP103 MOSFETs</strong> total (single model, TYPE parameter distinguishes NMOS/PMOS)</li>
-<li><strong>32 resistors</strong> (in input drivers)</li>
-<li><strong>34 voltage sources</strong> (32 driver + VDD + VSS)</li>
-<li><strong>~5,089 external circuit nodes</strong></li>
-</ul>
-<p>After node collapse (PSP103 has 8 internal nodes, 6 collapse), the system has:
-- 5,089 external nodes + 20,096 internal nodes (2 per MOSFET) + 34 vsource branch currents
-- <strong>~25,219 unknowns</strong> in the augmented MNA system</p>
-<h2 id="end-to-end-pipeline">End-to-End Pipeline<a class="headerlink" href="#end-to-end-pipeline" title="Permanent link">&para;</a></h2>
-<p>The entire simulation -- all timesteps, all Newton-Raphson iterations, all device
-evaluations -- compiles into a <strong>single XLA program</strong> via <code>jax.jit</code>. After the
-one-time JIT warmup, zero Python interpreter overhead remains.</p>
-<pre class="mermaid"><code>flowchart TB
-    subgraph once ["One-time setup (Python)"]
-        direction TB
-        A[Parse .sim netlist] --&gt; B[Compile PSP103.va via OpenVAF]
-        B --&gt; C[Group 10,048 MOSFETs by model type]
-        C --&gt; D["Split params: shared vs per-device"]
-        D --&gt; E[Pre-compute COO stamp indices]
-        E --&gt; F[Trial eval → discover sparsity pattern]
-        F --&gt; G[Pre-compute COO→CSR permutation]
-    end
-
-    subgraph jit ["JIT-compiled XLA program (GPU/CPU)"]
-        direction TB
-        H["Transient loop (lax.while_loop)"]
-        H --&gt; I[Compute integration coefficients]
-        I --&gt; J[Evaluate source waveforms]
-        J --&gt; K[Predict voltages from history]
-        K --&gt; L["NR loop (lax.while_loop)"]
-        L --&gt; M{Converged?}
-        M --&gt;|No| L
-        M --&gt;|Yes| N[LTE estimation]
-        N --&gt; O{Accept step?}
-        O --&gt;|No, halve dt| H
-        O --&gt;|Yes| P[Store solution, advance time]
-        P --&gt; H
-    end
-
-    once --&gt; jit</code></pre>
-<h2 id="newton-raphson-iteration-detail">Newton-Raphson Iteration Detail<a class="headerlink" href="#newton-raphson-iteration-detail" title="Permanent link">&para;</a></h2>
-<p>Each NR iteration is the performance-critical inner loop. Here is what happens
-inside <code>build_system_mna</code> + <code>linear_solve</code>:</p>
-<pre class="mermaid"><code>flowchart TB
-    subgraph nr ["Single NR Iteration"]
-        direction TB
-
-        subgraph extract ["1. Voltage Extraction (vectorized gather)"]
-            V["V: solution vector (25,219)"]
-            VE["V[node1] - V[node2]&lt;br/&gt;10,048 × 13 terminal voltages"]
-            V --&gt; VE
-        end
-
-        subgraph eval ["2. Batched Device Evaluation (jax.vmap)"]
-            direction TB
-            E1["PSP103 batch: vmap over 10,048 devices&lt;br/&gt;shared_params (broadcast) + device_params (10,048 × ~20)"]
-            E2["Resistor batch: vmap over 32 devices"]
-            E1 --&gt; R1["10,048 × residuals + 10,048 × Jacobian entries"]
-            E2 --&gt; R2["32 × residuals + 32 × Jacobian entries"]
-        end
-
-        subgraph stamp ["3. COO Stamping (pre-computed index arrays)"]
-            direction TB
-            S1["Map local → global indices via stamp_indices"]
-            S2["mask_coo_vector: zero out ground-node entries"]
-            S1 --&gt; S2
-        end
-
-        subgraph asm ["4. Matrix Assembly (segment_sum)"]
-            direction TB
-            A1["~320K COO triplets (row, col, val)"]
-            A2["segment_sum scatter-add → BCOO sparse matrix"]
-            A1 --&gt; A2
-        end
-
-        subgraph solve ["5. Sparse Linear Solve"]
-            direction TB
-            L1["COO→CSR via pre-computed permutation + segment_sum"]
-            L2["Enforce NOI constraints (zero rows/cols, unit diagonal)"]
-            L3["UMFPACK (CPU) or cuDSS (GPU) sparse LU solve"]
-            L1 --&gt; L2 --&gt; L3
-            L3 --&gt; D1["δV: Newton update (25,219)"]
-        end
-
-        extract --&gt; eval --&gt; stamp --&gt; asm --&gt; solve
-    end</code></pre>
-<h2 id="where-parallelism-happens">Where Parallelism Happens<a class="headerlink" href="#where-parallelism-happens" title="Permanent link">&para;</a></h2>
-<p>Each stage has a distinct parallelism mechanism:</p>
-<pre class="mermaid"><code>flowchart LR
-    subgraph stages ["Pipeline Stages"]
-        direction TB
-        S1["Voltage&lt;br/&gt;Extraction"]
-        S2["Device&lt;br/&gt;Evaluation"]
-        S3["COO&lt;br/&gt;Stamping"]
-        S4["Matrix&lt;br/&gt;Assembly"]
-        S5["Linear&lt;br/&gt;Solve"]
-    end
-
-    subgraph parallel ["Parallelism Mechanism"]
-        direction TB
-        P1["Vectorized gather&lt;br/&gt;V[indices] - V[indices]"]
-        P2["jax.vmap&lt;br/&gt;10,048 parallel threads"]
-        P3["Vectorized index&lt;br/&gt;mapping + masking"]
-        P4["jax.ops.segment_sum&lt;br/&gt;parallel scatter-add"]
-        P5["Sparse LU factorization&lt;br/&gt;(cuDSS on GPU)"]
-    end
-
-    subgraph scale ["Scale for c6288"]
-        direction TB
-        D1["10,048 × 13 lookups"]
-        D2["10,048 PSP103 evals&lt;br/&gt;+ 32 resistor evals"]
-        D3["~320K COO entries"]
-        D4["320K → ~200K unique&lt;br/&gt;in 25K × 25K matrix"]
-        D5["25,219 × 25,219&lt;br/&gt;sparse system"]
-    end
-
-    S1 --- P1 --- D1
-    S2 --- P2 --- D2
-    S3 --- P3 --- D3
-    S4 --- P4 --- D4
-    S5 --- P5 --- D5</code></pre>
-<h2 id="parameter-splitting-shared-vs-per-device">Parameter Splitting: Shared vs Per-Device<a class="headerlink" href="#parameter-splitting-shared-vs-per-device" title="Permanent link">&para;</a></h2>
-<p>The key optimization for batched evaluation is separating parameters that are
-constant across all 10,048 MOSFETs from those that vary per device.</p>
-<pre class="mermaid"><code>graph LR
-    subgraph shared ["Shared (broadcast, 1D)"]
-        SP["~800 model params&lt;br/&gt;(TOX, VFB0, NSUBO, ...)"]
-        SC["~400 cache values&lt;br/&gt;(computed by init)"]
-        SIM["simparams&lt;br/&gt;(analysis_type, gmin)"]
-    end
-
-    subgraph varying ["Per-device (batched, 2D)"]
-        VP["device_params&lt;br/&gt;10,048 × ~20&lt;br/&gt;(voltages + W, L, TYPE)"]
-        VC["device_cache&lt;br/&gt;10,048 × ~60&lt;br/&gt;(init results that vary)"]
-        LS["limit_state&lt;br/&gt;10,048 × n_lim"]
-    end
-
-    subgraph vmap_call ["jax.vmap(eval_fn, in_axes=(None, 0, None, 0, None, 0))"]
-        EVAL["PSP103 compact&lt;br/&gt;model equations"]
-    end
-
-    shared --&gt; vmap_call
-    varying --&gt; vmap_call
-    vmap_call --&gt; OUT["10,048 × residuals&lt;br/&gt;10,048 × Jacobian entries"]</code></pre>
-<p>The <code>in_axes=(None, 0, None, 0, None, 0)</code> specification tells JAX:
-- <code>None</code>: broadcast this input to all 10,048 invocations (shared params, shared cache, simparams)
-- <code>0</code>: slice along the first dimension, one row per device (device params, device cache, limit state)</p>
-<p>This means the ~800 shared model parameters are loaded once into registers/cache,
-while only the ~20 varying parameters differ per thread.</p>
-<h2 id="coo-stamping-and-assembly">COO Stamping and Assembly<a class="headerlink" href="#coo-stamping-and-assembly" title="Permanent link">&para;</a></h2>
-<p>Each device produces local residuals and Jacobian entries indexed by local
-node numbers (0..12 for PSP103). These must be mapped to global circuit indices.</p>
-<pre class="mermaid"><code>flowchart TB
-    subgraph local ["Per-device local output"]
-        direction LR
-        LR["residual[0..5]&lt;br/&gt;(6 node contributions)"]
-        LJ["jacobian[0..31]&lt;br/&gt;(up to 32 dI/dV entries)"]
-    end
-
-    subgraph mapping ["Stamp index mapping"]
-        direction LR
-        RI["res_indices: (10,048 × 6)&lt;br/&gt;local node → global row"]
-        JR["jac_row_indices: (10,048 × 32)"]
-        JC["jac_col_indices: (10,048 × 32)"]
-    end
-
-    subgraph global ["Global COO arrays"]
-        direction LR
-        GR["f_resist: ~60K valid entries&lt;br/&gt;→ segment_sum → f[25,219]"]
-        GJ["J entries: ~320K triplets&lt;br/&gt;→ segment_sum → J[25,219 × 25,219]"]
-    end
-
-    local --&gt; mapping --&gt; global</code></pre>
-<p>Ground-node entries are mapped to index -1 and masked to zero, so they don't
-pollute the system.</p>
-<h2 id="sparse-solver-path">Sparse Solver Path<a class="headerlink" href="#sparse-solver-path" title="Permanent link">&para;</a></h2>
-<p>The c6288 system is too large for dense linear algebra (25K × 25K × 8 bytes = ~5GB).
-The sparse path avoids materializing the full matrix:</p>
-<pre class="mermaid"><code>flowchart TB
-    subgraph coo ["BCOO from assembly"]
-        C1["~320K COO triplets&lt;br/&gt;(row, col, val)"]
-    end
-
-    subgraph convert ["COO → CSR (pre-computed)"]
-        C2["sort by (row, col) via permutation"]
-        C3["segment_sum to merge duplicates"]
-        C4["CSR: ~200K stored elements"]
-    end
-
-    subgraph noi ["NOI Constraint Enforcement"]
-        N1["Zero out NOI rows/cols in CSR data"]
-        N2["Set NOI diagonal to 1.0"]
-        N3["Zero NOI entries in RHS"]
-    end
-
-    subgraph solve ["Backend-specific solve"]
-        direction LR
-        GPU["GPU: cuDSS/Spineax&lt;br/&gt;Cached symbolic factorization&lt;br/&gt;Only numerical refactor per NR iter"]
-        CPU["CPU: UMFPACK via FFI&lt;br/&gt;Direct sparse LU"]
-    end
-
-    coo --&gt; convert --&gt; noi --&gt; solve</code></pre>
-<p>The COO→CSR conversion is itself parallel: the permutation and segment_sum are
-pre-computed during setup, so at runtime it's just a gather + scatter-add.</p>
-<h2 id="transient-time-stepping-loop">Transient Time-Stepping Loop<a class="headerlink" href="#transient-time-stepping-loop" title="Permanent link">&para;</a></h2>
-<p>The outer loop is also JIT-compiled via <code>lax.while_loop</code>:</p>
-<pre class="mermaid"><code>stateDiagram-v2
-    [*] --&gt; ComputeCoeffs: t &lt; t_stop
-
-    ComputeCoeffs: Compute integration coefficients
-    ComputeCoeffs --&gt; EvalSources: c0, c1 from BDF/Trap
-
-    EvalSources: Evaluate source waveforms
-    EvalSources --&gt; Predict: vsource_vals at t+dt
-
-    Predict: Extrapolate V from history
-    Predict --&gt; NRSolve: V_pred as initial guess
-
-    NRSolve: Newton-Raphson solve
-    NRSolve --&gt; CheckNR
-
-    CheckNR: NR converged?
-    CheckNR --&gt; LTE: Yes
-    CheckNR --&gt; Reject: No (halve dt)
-
-    LTE: Estimate local truncation error
-    LTE --&gt; CheckLTE
-
-    CheckLTE: LTE acceptable?
-    CheckLTE --&gt; Accept: Yes
-    CheckLTE --&gt; Reject: No (reduce dt)
-
-    Reject: Reduce timestep
-    Reject --&gt; ComputeCoeffs
-
-    Accept: Store solution
-    Accept --&gt; AdvanceTime
-
-    AdvanceTime: Update history, advance t
-    AdvanceTime --&gt; ComputeCoeffs: t &lt; t_stop
-    AdvanceTime --&gt; [*]: t &gt;= t_stop</code></pre>
-<h2 id="performance-profile">Performance Profile<a class="headerlink" href="#performance-profile" title="Permanent link">&para;</a></h2>
-<p>For c6288 on CPU (CI benchmark results):</p>
+<h1 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h1>
+<p>VAJAX supports user-level and project-level configuration via TOML files, plus environment variable overrides.</p>
+<h2 id="config-files">Config Files<a class="headerlink" href="#config-files" title="Permanent link">&para;</a></h2>
+<p>VAJAX loads configuration from two locations (later overrides earlier):</p>
 <table>
 <thead>
 <tr>
-<th>Metric</th>
-<th>Value</th>
+<th>Source</th>
+<th>Path</th>
+<th>Use case</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Timesteps</td>
-<td>~1,000</td>
+<td>User config</td>
+<td><code>~/.config/vajax/config.toml</code></td>
+<td>Personal model paths, global preferences</td>
 </tr>
 <tr>
-<td>NR iterations/step</td>
-<td>5-20</td>
-</tr>
-<tr>
-<td>Device evals/NR iter</td>
-<td>10,048 PSP103 + 32 resistors</td>
-</tr>
-<tr>
-<td>Per-step time (VAJAX)</td>
-<td>90 ms</td>
-</tr>
-<tr>
-<td>Per-step time (VACASK)</td>
-<td>80 ms</td>
-</tr>
-<tr>
-<td>Total wall time (VAJAX)</td>
-<td>65.7s (includes JIT)</td>
-</tr>
-<tr>
-<td>Total wall time (VACASK)</td>
-<td>80.2s</td>
-</tr>
-<tr>
-<td>Speedup (total)</td>
-<td><strong>1.22x faster</strong> (JIT amortized)</td>
+<td>Project config</td>
+<td><code>vajax.toml</code> in working directory</td>
+<td>Per-project model paths</td>
 </tr>
 </tbody>
 </table>
-<p>The per-step overhead (~10ms) comes from adaptive timestep machinery, <code>jnp.where</code>
-branching, and COO assembly. This overhead is fixed regardless of circuit size,
-which is why c6288 (~90ms/step) is competitive while small circuits (rc: 0.014ms
-VAJAX vs 0.002ms VACASK) show higher ratios.</p>
-<p>On GPU, the vmap'd device evaluation and cuDSS sparse solve provide additional
-speedup for large circuits, as the 10,048 parallel PSP103 evaluations map
-directly to GPU threads.</p>
-<h3 id="scale-comparison-benchmarks">Scale Comparison: Benchmarks<a class="headerlink" href="#scale-comparison-benchmarks" title="Permanent link">&para;</a></h3>
+<p>On Linux/macOS, the user config follows the <a href="https://specifications.freedesktop.org/basedir-spec/latest/">XDG Base Directory Specification</a> — set <code>$XDG_CONFIG_HOME</code> to override the default <code>~/.config</code> location.</p>
+<p>On Windows, the user config is at <code>%APPDATA%\vajax\config.toml</code>.</p>
+<h2 id="config-schema">Config Schema<a class="headerlink" href="#config-schema" title="Permanent link">&para;</a></h2>
+<h3 id="models-search-paths"><code>[models]</code> — Search Paths<a class="headerlink" href="#models-search-paths" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># ~/.config/vajax/config.toml</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="k">[models]</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Additional directories to search for .va model files and .sim includes.</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="c1"># Each path is a directory that may contain .va files directly</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="c1"># or in subdirectories matching the model name.</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="n">paths</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">    </span><span class="s2">&quot;/path/to/my/models&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">    </span><span class="s2">&quot;/opt/vacask/devices&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">    </span><span class="s2">&quot;~/pdk/models&quot;</span><span class="p">,</span><span class="w">        </span><span class="c1"># Tilde expansion is supported</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="p">]</span>
+</code></pre></div>
+<p>These paths are used for both <code>load</code> statements (Verilog-A <code>.va</code> models) and <code>include</code> statements (netlist <code>.sim</code> files). Paths that don't exist are silently skipped (logged at DEBUG level).</p>
+<h2 id="environment-variables">Environment Variables<a class="headerlink" href="#environment-variables" title="Permanent link">&para;</a></h2>
+<h3 id="model-paths">Model paths<a class="headerlink" href="#model-paths" title="Permanent link">&para;</a></h3>
+<p><code>VAJAX_MODEL_PATH</code> — colon-separated (<code>;</code> on Windows) list of directories to search for <code>.va</code> model files. These are searched <strong>before</strong> config file paths.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Single directory</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">VAJAX_MODEL_PATH</span><span class="o">=</span>/path/to/my/models
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1"># Multiple directories</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="nb">export</span><span class="w"> </span><span class="nv">VAJAX_MODEL_PATH</span><span class="o">=</span>/path/to/models1:/path/to/models2
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="c1"># Windows (PowerShell)</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="nv">$env</span>:VAJAX_MODEL_PATH<span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;C:\models1;C:\models2&quot;</span>
+</code></pre></div>
+<h3 id="other-environment-variables">Other environment variables<a class="headerlink" href="#other-environment-variables" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
 <tr>
-<th>Metric</th>
-<th>c6288 (16x16)</th>
-<th>mul64 (64x64)</th>
-<th>Ratio</th>
+<th>Variable</th>
+<th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Architecture</td>
-<td>Wallace-tree</td>
-<td>Array multiplier</td>
-<td>—</td>
+<td><code>VAJAX_CACHE_DIR</code></td>
+<td>Override cache directory (default: <code>~/.cache/vajax/</code>)</td>
 </tr>
 <tr>
-<td>Partial product ANDs</td>
-<td>256</td>
-<td>4,096</td>
-<td>16x</td>
+<td><code>VAJAX_NO_PROGRESS</code></td>
+<td>Set to <code>1</code> to disable progress bars</td>
 </tr>
 <tr>
-<td>Total MOSFETs</td>
-<td>~10,048</td>
-<td>~266,408</td>
-<td>~27x</td>
+<td><code>JAX_PLATFORMS</code></td>
+<td>Force JAX platform: <code>cpu</code>, <code>cuda</code>, <code>gpu</code></td>
 </tr>
 <tr>
-<td>Estimated unknowns</td>
-<td>~25,219</td>
-<td>~400K+</td>
-<td>~16x</td>
-</tr>
-<tr>
-<td>Adder cells</td>
-<td>~2,160</td>
-<td>~3,969</td>
-<td>~2x</td>
+<td><code>JAX_ENABLE_X64</code></td>
+<td>Enable float64: <code>1</code> or <code>0</code></td>
 </tr>
 </tbody>
 </table>
-<p>The <code>mul64</code> benchmark serves as a GPU stress test — at ~266K MOSFETs and ~400K+
-unknowns, it exercises the sparse solver and vmap'd device evaluation at a scale
-where GPU parallelism is essential.</p>
+<h2 id="search-order">Search Order<a class="headerlink" href="#search-order" title="Permanent link">&para;</a></h2>
+<p>Both <code>load</code> (VA models) and <code>include</code> (netlist files) use the same search order:</p>
+<ol>
+<li><strong>Netlist directory</strong> — relative to the file containing the <code>load</code>/<code>include</code> statement</li>
+<li><strong><code>VAJAX_MODEL_PATH</code></strong> — environment variable directories</li>
+<li><strong>Config file <code>[models].paths</code></strong> — project config first, then user config</li>
+<li><strong>Bundled models</strong> — <code>vajax/devices/models/</code> (resistor, capacitor, etc.)</li>
+<li><strong>Vendor directories</strong> — <code>vendor/OpenVAF/integration_tests</code>, <code>vendor/VACASK/devices</code></li>
+</ol>
+<p>The first match wins. This means you can override bundled models by placing your version in an earlier search path.</p>
+<h2 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h2>
+<h3 id="point-to-a-local-pdk">Point to a local PDK<a class="headerlink" href="#point-to-a-local-pdk" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># vajax.toml (in project directory)</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="k">[models]</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">paths</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;/opt/pdk/sky130/models&quot;</span><span class="p">]</span>
+</code></pre></div>
+<h3 id="use-vacask-models-from-a-separate-install">Use VACASK models from a separate install<a class="headerlink" href="#use-vacask-models-from-a-separate-install" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># ~/.config/vajax/config.toml</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="k">[models]</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">paths</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;/usr/local/share/vacask/devices&quot;</span><span class="p">]</span>
+</code></pre></div>
+<h3 id="temporary-override-for-a-single-run">Temporary override for a single run<a class="headerlink" href="#temporary-override-for-a-single-run" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nv">VAJAX_MODEL_PATH</span><span class="o">=</span>/tmp/test_models<span class="w"> </span>vajax<span class="w"> </span>circuit.sim
+</code></pre></div>
+<h2 id="programmatic-access">Programmatic Access<a class="headerlink" href="#programmatic-access" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">vajax.user_config</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_config</span><span class="p">,</span> <span class="n">get_model_paths</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="c1"># Get merged config dict</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="n">config</span> <span class="o">=</span> <span class="n">get_config</span><span class="p">()</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="c1"># Get resolved model search paths (existing directories only)</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="n">paths</span> <span class="o">=</span> <span class="n">get_model_paths</span><span class="p">()</span>
+</code></pre></div>
 
 
 
