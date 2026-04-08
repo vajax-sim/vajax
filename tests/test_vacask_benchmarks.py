@@ -113,6 +113,7 @@ class TestBenchmarkTransient:
     def test_transient_dense(self, benchmark_name: str):
         """Test transient with dense solver."""
         info = get_benchmark(benchmark_name)
+        assert info is not None, f"Benchmark {benchmark_name} not found in registry"
         if info.is_large:
             pytest.skip(f"{benchmark_name} too large for dense solver")
         if info.xfail:
@@ -144,6 +145,7 @@ class TestBenchmarkTransient:
     def test_transient_sparse(self, benchmark_name: str):
         """Test transient with sparse solver."""
         info = get_benchmark(benchmark_name)
+        assert info is not None, f"Benchmark {benchmark_name} not found in registry"
         if info.is_large:
             pytest.skip(f"{benchmark_name} requires GPU - use scripts/profile_gpu_cloudrun.py")
 
@@ -506,6 +508,7 @@ def _compare_result_to_vacask(
     if vacask_voltage is None:
         return {"error": f"Could not find {spec.vacask_nodes} in VACASK output", "passed": False}
 
+    assert vacask_node_used is not None
     jax_node_idx = spec.jax_nodes[spec.vacask_nodes.index(vacask_node_used) % len(spec.jax_nodes)]
     jax_voltage = np.array(result.voltages.get(jax_node_idx, []))
 
@@ -560,6 +563,7 @@ class TestVACASKResultComparison:
         test_start = time.perf_counter()
         spec = COMPARISON_SPECS[benchmark_name]
         info = get_benchmark(benchmark_name)
+        assert info is not None, f"Benchmark {benchmark_name} not found in registry"
 
         # Apply MAX_STEPS limit for CI if set
         t_stop = info.t_stop
