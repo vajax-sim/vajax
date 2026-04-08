@@ -455,7 +455,7 @@ def run_vacask_simulation(vacask_bin: Path, info: BenchmarkInfo, t_stop: float, 
     temp_sim.write_text(modified)
 
     try:
-        subprocess.run(
+        result = subprocess.run(
             [str(vacask_bin), "test_compare.sim"],
             cwd=sim_dir,
             capture_output=True,
@@ -465,7 +465,12 @@ def run_vacask_simulation(vacask_bin: Path, info: BenchmarkInfo, t_stop: float, 
 
         raw_files = list(sim_dir.glob("*.raw"))
         if not raw_files:
-            raise RuntimeError(f"VACASK did not produce .raw file in {sim_dir}")
+            raise RuntimeError(
+                f"VACASK did not produce .raw file in {sim_dir}\n"
+                f"  return code: {result.returncode}\n"
+                f"  stdout: {result.stdout[-2000:] if result.stdout else '(empty)'}\n"
+                f"  stderr: {result.stderr[-2000:] if result.stderr else '(empty)'}"
+            )
 
         raw = rawread(str(raw_files[0])).get()
         voltages = {name: np.array(raw[name]) for name in raw.names if name != "time"}
