@@ -55,8 +55,9 @@ pdks/
 runme.py
 runme.py.origin
 
-# Claude Code local config
-.claude/
+# Claude Code local config (track commands/ for shared slash commands)
+.claude/*
+!.claude/commands/
 .tldr/
 
 # Generated plots and images (keep in scripts/ subdirs if needed)
