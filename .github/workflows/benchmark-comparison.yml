@@ -228,16 +228,8 @@ jobs:
           wget -q https://github.com/marzer/tomlplusplus/archive/refs/tags/v3.4.0.tar.gz
           tar -xzf v3.4.0.tar.gz
 
-      - name: Cache VACASK build
-        if: matrix.platform == 'cpu'
-        uses: actions/cache@v4
-        id: cache-vacask
-        with:
-          path: vendor/VACASK/build
-          key: vacask-build-${{ runner.os }}-${{ hashFiles('vendor/VACASK/CMakeLists.txt', 'vendor/VACASK/lib/**', 'vendor/VACASK/simulator/**', 'vendor/VACASK/devices/**', 'vendor/OpenVAF/Cargo.lock') }}
-
       - name: Build VACASK
-        if: matrix.platform == 'cpu' && steps.cache-vacask.outputs.cache-hit != 'true'
+        if: matrix.platform == 'cpu'
         run: |
           cd vendor/VACASK
           mkdir -p build && cd build
