@@ -6,7 +6,9 @@ from vajax.utils.ngspice import (
     parse_control_section,
     run_ngspice,
 )
+from vajax.utils.openvaf_build import ensure_openvaf
 from vajax.utils.rawfile import RawData, RawFile, rawread
+from vajax.utils.vacask_build import ensure_vacask
 from vajax.utils.waveform_compare import (
     ComparisonResult,
     WaveformComparison,
@@ -34,6 +36,8 @@ __all__ = [
     "run_comparison",
     "run_vacask",
     "find_vacask_binary",
+    "ensure_vacask",
+    "ensure_openvaf",
     # ngspice utilities
     "find_ngspice_binary",
     "parse_control_section",

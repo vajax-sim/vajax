@@ -73,32 +73,13 @@ class ComparisonResult:
 
 
 def find_vacask_binary() -> Optional[Path]:
-    """Find the VACASK binary."""
-    import os
+    """Find the VACASK binary.
 
-    # Check environment variable first
-    if env_path := os.environ.get("VACASK_BIN"):
-        path = Path(env_path).resolve()
-        if path.exists() and path.is_file():
-            return path
+    Delegates to ensure_vacask() for consolidated search logic.
+    """
+    from vajax.utils.vacask_build import ensure_vacask
 
-    # Check common locations
-    # __file__ is vajax/utils/waveform_compare.py
-    # .parent.parent.parent gets to vajax root
-    project_root = Path(__file__).parent.parent.parent
-    search_paths = [
-        project_root / "vendor/VACASK/build/simulator/vacask",
-        project_root / "vendor/VACASK/build.VACASK/Release/simulator/vacask",
-        project_root / "vendor/VACASK/build.VACASK/Debug/simulator/vacask",
-        Path.home() / "bin/vacask",
-        Path("/usr/local/bin/vacask"),
-    ]
-
-    for path in search_paths:
-        if path.exists():
-            return path
-
-    return None
+    return ensure_vacask(build_if_missing=False)
 
 
 def run_vacask(
