@@ -395,7 +395,9 @@ class ComparisonSpec:
     align_on_rising_edge: bool = False  # Align waveforms on rising edge before comparison
     align_threshold: float = 0.6  # Voltage threshold for rising edge detection
     align_after_time: float = 0.0  # Only use edges after this time (skip startup)
-    ci_max_steps: Optional[int] = None  # Per-benchmark step limit for CI (overrides VAJAX_MAX_STEPS)
+    ci_max_steps: Optional[int] = (
+        None  # Per-benchmark step limit for CI (overrides VAJAX_MAX_STEPS)
+    )
     # Adaptive timestep is always used (matches VACASK behavior)
 
 
@@ -573,7 +575,9 @@ class TestVACASKResultComparison:
         t_stop = info.t_stop
         dt = info.dt
         if MAX_STEPS_ENV > 0:
-            effective_max_steps = spec.ci_max_steps if spec.ci_max_steps is not None else MAX_STEPS_ENV
+            effective_max_steps = (
+                spec.ci_max_steps if spec.ci_max_steps is not None else MAX_STEPS_ENV
+            )
             max_t_stop = dt * effective_max_steps
             if t_stop > max_t_stop:
                 logger.info(

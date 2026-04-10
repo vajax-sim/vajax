@@ -242,9 +242,7 @@ PLOT_CONFIGS: Dict[str, PlotConfig] = {
 }
 
 
-def _get_ngspice_voltage(
-    data: Optional[Dict[str, np.ndarray]], node: str
-) -> Optional[np.ndarray]:
+def _get_ngspice_voltage(data: Optional[Dict[str, np.ndarray]], node: str) -> Optional[np.ndarray]:
     """Get voltage from ngspice data, trying both 'node' and 'v(node)' formats."""
     if data is None:
         return None
@@ -422,18 +420,36 @@ def plot_three_way(
         for i, node in enumerate(nodes):
             offset = i * 1.5
             if vacask_data and t_vac is not None and mask_vac is not None and node in vacask_data:
-                ax.plot(t_vac[mask_vac] * time_scale, vacask_data[node][mask_vac] + offset,
-                        "b-", lw=0.8, alpha=0.8, label=f"VAC {node}" if i < 2 else None)
+                ax.plot(
+                    t_vac[mask_vac] * time_scale,
+                    vacask_data[node][mask_vac] + offset,
+                    "b-",
+                    lw=0.8,
+                    alpha=0.8,
+                    label=f"VAC {node}" if i < 2 else None,
+                )
             ng_v = _get_ngspice_voltage(ngspice_data, node)
             if ng_v is not None and t_ng is not None and mask_ng is not None:
-                ax.plot(t_ng[mask_ng] * time_scale, ng_v[mask_ng] + offset,
-                        "g--", lw=0.8, alpha=0.8, label=f"NG {node}" if i < 2 else None)
+                ax.plot(
+                    t_ng[mask_ng] * time_scale,
+                    ng_v[mask_ng] + offset,
+                    "g--",
+                    lw=0.8,
+                    alpha=0.8,
+                    label=f"NG {node}" if i < 2 else None,
+                )
             jax_v = jax_voltages.get(node)
             if jax_v is None:
                 jax_v = jax_voltages.get(f"top.{node}")
             if jax_v is not None:
-                ax.plot(jax_times[mask_jax] * time_scale, jax_v[mask_jax] + offset,
-                        "r:", lw=0.8, alpha=0.8, label=f"VAJAX {node}" if i < 2 else None)
+                ax.plot(
+                    jax_times[mask_jax] * time_scale,
+                    jax_v[mask_jax] + offset,
+                    "r:",
+                    lw=0.8,
+                    alpha=0.8,
+                    label=f"VAJAX {node}" if i < 2 else None,
+                )
         ax.set_ylabel(f"{title} [V + offset]", fontsize=11)
         ax.set_title(f"{config.name}: {title}", fontsize=12, fontweight="bold")
         ax.grid(True, alpha=0.3)
@@ -453,23 +469,42 @@ def plot_three_way(
         offset = i * 1.5
 
         if vacask_data and t_vac is not None and mask_vac is not None and vac_node in vacask_data:
-            ax.plot(t_vac[mask_vac] * time_scale, vacask_data[vac_node][mask_vac] + offset,
-                    "b-", lw=0.8, alpha=0.8, label=f"VAC {vac_node}" if i < 2 else None)
+            ax.plot(
+                t_vac[mask_vac] * time_scale,
+                vacask_data[vac_node][mask_vac] + offset,
+                "b-",
+                lw=0.8,
+                alpha=0.8,
+                label=f"VAC {vac_node}" if i < 2 else None,
+            )
         ng_v = _get_ngspice_voltage(ngspice_data, vac_node)
         if ng_v is not None and t_ng is not None and mask_ng is not None:
-            ax.plot(t_ng[mask_ng] * time_scale, ng_v[mask_ng] + offset,
-                    "g--", lw=0.8, alpha=0.8, label=f"NG {vac_node}" if i < 2 else None)
+            ax.plot(
+                t_ng[mask_ng] * time_scale,
+                ng_v[mask_ng] + offset,
+                "g--",
+                lw=0.8,
+                alpha=0.8,
+                label=f"NG {vac_node}" if i < 2 else None,
+            )
         jax_v = jax_voltages.get(v_node)
         if jax_v is None:
             jax_v = jax_voltages.get(vac_node)
         if jax_v is not None:
-            ax.plot(jax_times[mask_jax] * time_scale, jax_v[mask_jax] + offset,
-                    "r:", lw=0.8, alpha=0.8, label=f"VAJAX {vac_node}" if i < 2 else None)
+            ax.plot(
+                jax_times[mask_jax] * time_scale,
+                jax_v[mask_jax] + offset,
+                "r:",
+                lw=0.8,
+                alpha=0.8,
+                label=f"VAJAX {vac_node}" if i < 2 else None,
+            )
 
     node_labels = ", ".join(n.split(".")[-1] for n in plot_cfg.voltage_nodes[:3])
     ax.set_ylabel("Output [V + offset]", fontsize=11)
-    ax.set_title(f"Output ({node_labels}{'...' if len(plot_cfg.voltage_nodes) > 3 else ''})",
-                 fontsize=12)
+    ax.set_title(
+        f"Output ({node_labels}{'...' if len(plot_cfg.voltage_nodes) > 3 else ''})", fontsize=12
+    )
     ax.legend(loc="upper right", fontsize=9, ncol=4)
     ax.grid(True, alpha=0.3)
     panel_idx += 1
@@ -480,19 +515,37 @@ def plot_three_way(
     if vacask_data is not None and t_vac is not None and mask_vac is not None:
         I_vac = vacask_data.get(f"{src}:flow(br)")
         if I_vac is not None:
-            ax.plot(t_vac[mask_vac] * time_scale, I_vac[mask_vac] * 1e6,
-                    "b-", lw=1.5, label="VACASK", alpha=0.9)
+            ax.plot(
+                t_vac[mask_vac] * time_scale,
+                I_vac[mask_vac] * 1e6,
+                "b-",
+                lw=1.5,
+                label="VACASK",
+                alpha=0.9,
+            )
     if ngspice_data is not None and t_ng is not None and mask_ng is not None:
         I_ng = ngspice_data.get(f"i({src})")
         if I_ng is None:
             I_ng = ngspice_data.get(f"{src}#branch")
         if I_ng is not None:
-            ax.plot(t_ng[mask_ng] * time_scale, I_ng[mask_ng] * 1e6,
-                    "g--", lw=1.5, label="ngspice", alpha=0.9)
+            ax.plot(
+                t_ng[mask_ng] * time_scale,
+                I_ng[mask_ng] * 1e6,
+                "g--",
+                lw=1.5,
+                label="ngspice",
+                alpha=0.9,
+            )
     I_jax = jax_currents.get(src)
     if I_jax is not None:
-        ax.plot(jax_times[mask_jax] * time_scale, I_jax[mask_jax] * 1e6,
-                "r:", lw=1.5, label="VAJAX", alpha=0.9)
+        ax.plot(
+            jax_times[mask_jax] * time_scale,
+            I_jax[mask_jax] * 1e6,
+            "r:",
+            lw=1.5,
+            label="VAJAX",
+            alpha=0.9,
+        )
 
     ax.set_ylabel(f"I({src}) [uA]", fontsize=11)
     ax.set_xlabel(f"Time [{time_unit}]", fontsize=11)
@@ -1253,9 +1306,13 @@ def main():
             jax_times, jax_voltages, jax_currents = jax_result
             output_file = plot_dir / f"{name}_three_way_comparison.png"
             plot_three_way(
-                config, plot_cfg,
-                vacask_data, ngspice_data,
-                jax_times, jax_voltages, jax_currents,
+                config,
+                plot_cfg,
+                vacask_data,
+                ngspice_data,
+                jax_times,
+                jax_voltages,
+                jax_currents,
                 output_file,
             )
 
