@@ -183,7 +183,329 @@ VACASK_REFERENCE_TIMES = {
 }
 
 
-from vajax.utils import find_vacask_binary
+from dataclasses import dataclass
+
+import numpy as np
+
+from vajax.utils import find_ngspice_binary, find_vacask_binary, rawread
+from vajax.utils import run_ngspice as run_ngspice_util
+from vajax.utils import run_vacask as run_vacask_util
+
+
+# =============================================================================
+# Three-way comparison plotting (VACASK vs VAJAX vs ngspice)
+# =============================================================================
+
+
+@dataclass
+class PlotConfig:
+    """Per-benchmark configuration for three-way comparison plots."""
+
+    voltage_nodes: list  # Nodes to plot
+    current_source: str  # Name of vsource for current
+    t_stop: Optional[float] = None  # Override t_stop for plot sim (None = use netlist)
+    plot_window: Optional[Tuple[float, float]] = None  # (t_start, t_end) or None for full
+    input_nodes_a: Optional[list] = None  # Input bus A nodes (e.g., a0-a15)
+    input_nodes_b: Optional[list] = None  # Input bus B nodes (e.g., b0-b15)
+
+
+PLOT_CONFIGS: Dict[str, PlotConfig] = {
+    "rc": PlotConfig(
+        voltage_nodes=["1", "2"],
+        current_source="vs",
+        t_stop=10e-3,  # Netlist is 1s — only need 10ms to see RC response
+        plot_window=(0, 10e-3),
+    ),
+    "graetz": PlotConfig(
+        voltage_nodes=["inp", "outp"],
+        current_source="vs",
+        t_stop=100e-3,  # Netlist is 1s — 100ms shows 5 cycles at 50Hz
+        plot_window=(0, 100e-3),
+    ),
+    "mul": PlotConfig(
+        voltage_nodes=["1", "2", "10", "20"],
+        current_source="vs",
+        t_stop=100e-6,  # Netlist is 5ms — 100us shows 10 cycles at 100kHz
+        plot_window=(0, 100e-6),
+    ),
+    "ring": PlotConfig(
+        voltage_nodes=["1", "2"],
+        current_source="vdd",
+        t_stop=20e-9,  # Netlist is 1us — 20ns shows several oscillation periods
+        plot_window=(2e-9, 18e-9),
+    ),
+    "c6288": PlotConfig(
+        voltage_nodes=[f"top.p{n}" for n in range(32)],
+        current_source="vdd",
+        # Uses netlist t_stop (2ns) — already short
+        input_nodes_a=[f"a{i}" for i in range(16)],
+        input_nodes_b=[f"b{i}" for i in range(16)],
+    ),
+}
+
+
+def _get_ngspice_voltage(
+    data: Optional[Dict[str, np.ndarray]], node: str
+) -> Optional[np.ndarray]:
+    """Get voltage from ngspice data, trying both 'node' and 'v(node)' formats."""
+    if data is None:
+        return None
+    if node in data:
+        return data[node]
+    if f"v({node})" in data:
+        return data[f"v({node})"]
+    return None
+
+
+def _read_raw_to_dict(raw_path: Path) -> Dict[str, np.ndarray]:
+    """Read a SPICE .raw file and return as {name: array} dict."""
+    raw_data = rawread(str(raw_path))
+    raw_file = raw_data.get()
+    return {name: np.array(raw_file[name]) for name in raw_file.names}
+
+
+def _run_vacask_for_plot(
+    config: BenchmarkInfo, output_dir: Path
+) -> Optional[Dict[str, np.ndarray]]:
+    """Run VACASK for plotting and return waveform data dict, or None."""
+    import shutil
+    import tempfile
+
+    from vajax.utils.vacask_build import ensure_vacask
+
+    vacask_bin = ensure_vacask()
+    if vacask_bin is None:
+        print("  VACASK: binary not found and build failed, skipping plot data")
+        return None
+
+    raw_file = output_dir / f"{config.name}_vacask.raw"
+
+    # Use cache if available
+    if raw_file.exists():
+        print(f"  Using cached VACASK data: {raw_file}")
+        return _read_raw_to_dict(raw_file)
+
+    print(f"  Running VACASK for plot ({config.name})...", end=" ", flush=True)
+    temp_output = Path(tempfile.mkdtemp(prefix="vacask_"))
+    result_raw, error = run_vacask_util(config.sim_path, output_dir=temp_output, timeout=600)
+
+    if error:
+        print(f"failed: {error}")
+        return None
+
+    if result_raw and result_raw.exists():
+        shutil.copy(result_raw, raw_file)
+        print("done")
+        return _read_raw_to_dict(raw_file)
+
+    print("no output")
+    return None
+
+
+def _run_ngspice_for_plot(
+    config: BenchmarkInfo, output_dir: Path
+) -> Optional[Dict[str, np.ndarray]]:
+    """Run ngspice for plotting and return waveform data dict, or None."""
+    import shutil
+    import tempfile
+
+    if find_ngspice_binary() is None:
+        print("  ngspice: not found, skipping")
+        return None
+
+    raw_file = output_dir / f"{config.name}_ngspice.raw"
+
+    if raw_file.exists():
+        print(f"  Using cached ngspice data: {raw_file}")
+        return _read_raw_to_dict(raw_file)
+
+    # ngspice sim files are alongside the vacask ones
+    ngspice_sim = config.sim_path.parent.parent / "ngspice" / "runme.sim"
+    if not ngspice_sim.exists():
+        print(f"  ngspice: sim file not found at {ngspice_sim}")
+        return None
+
+    # Copy OSDI files from vacask dir if needed by ngspice
+    sim_content = ngspice_sim.read_text()
+    osdi_files = re.findall(r"pre_osdi\s+(\S+)", sim_content)
+    vacask_dir = config.sim_path.parent
+    ngspice_dir = ngspice_sim.parent
+    for osdi_file in osdi_files:
+        osdi_src = vacask_dir / osdi_file
+        osdi_dst = ngspice_dir / osdi_file
+        if osdi_src.exists() and not osdi_dst.exists():
+            shutil.copy(osdi_src, osdi_dst)
+
+    print(f"  Running ngspice for plot ({config.name})...", end=" ", flush=True)
+    temp_output = Path(tempfile.mkdtemp(prefix="ngspice_"))
+    result_raw, error = run_ngspice_util(ngspice_sim, output_dir=temp_output, timeout=600)
+
+    if error:
+        print(f"failed: {error}")
+        return None
+
+    if result_raw and result_raw.exists():
+        shutil.copy(result_raw, raw_file)
+        print("done")
+        return _read_raw_to_dict(raw_file)
+
+    print("no output")
+    return None
+
+
+def _run_vajax_for_plot(
+    config: BenchmarkInfo,
+    plot_cfg: PlotConfig,
+    use_sparse: bool = False,
+) -> Optional[Tuple[np.ndarray, Dict[str, np.ndarray], Dict[str, np.ndarray]]]:
+    """Run VAJAX and return (times, voltages, currents) dicts, or None."""
+    t_stop = plot_cfg.t_stop if plot_cfg.t_stop is not None else config.t_stop
+    print(f"  Running VAJAX for plot ({config.name}, t_stop={t_stop:.2e})...", end=" ", flush=True)
+    engine = CircuitEngine(config.sim_path)
+    engine.parse()
+    engine.prepare(t_stop=t_stop, dt=config.dt, use_sparse=use_sparse)
+    result = engine.run_transient()
+
+    times = np.array(result.times)
+    voltages = {k: np.array(v) for k, v in result.voltages.items()}
+    currents = {k: np.array(v) for k, v in result.currents.items()}
+    print(f"done ({len(times)} points)")
+    return times, voltages, currents
+
+
+def plot_three_way(
+    config: BenchmarkInfo,
+    plot_cfg: PlotConfig,
+    vacask_data: Optional[Dict[str, np.ndarray]],
+    ngspice_data: Optional[Dict[str, np.ndarray]],
+    jax_times: np.ndarray,
+    jax_voltages: Dict[str, np.ndarray],
+    jax_currents: Dict[str, np.ndarray],
+    output_file: Path,
+) -> None:
+    """Create multi-panel three-way comparison plot."""
+    try:
+        import matplotlib.pyplot as plt
+    except ImportError:
+        print("  matplotlib not available - skipping plot")
+        return
+
+    # Determine number of panels
+    has_inputs = plot_cfg.input_nodes_a or plot_cfg.input_nodes_b
+    n_panels = 2  # Output voltage + current
+    if has_inputs:
+        n_panels += 2 if plot_cfg.input_nodes_a and plot_cfg.input_nodes_b else 1
+
+    _fig, axes = plt.subplots(n_panels, 1, figsize=(14, 3 * n_panels), sharex=True)
+    if n_panels == 1:
+        axes = [axes]
+
+    # Time window and scale
+    if plot_cfg.plot_window:
+        t_start, t_end = plot_cfg.plot_window
+    else:
+        t_start = 0.0
+        t_end = float(jax_times[-1]) if len(jax_times) > 0 else 1e-9
+    time_scale = 1e12 if t_end < 1e-9 else 1e9
+    time_unit = "ps" if time_scale == 1e12 else "ns"
+
+    # Time masks
+    mask_jax = (jax_times >= t_start) & (jax_times <= t_end)
+    t_vac = vacask_data["time"] if vacask_data and "time" in vacask_data else None
+    mask_vac = (t_vac >= t_start) & (t_vac <= t_end) if t_vac is not None else None
+    t_ng = ngspice_data["time"] if ngspice_data and "time" in ngspice_data else None
+    mask_ng = (t_ng >= t_start) & (t_ng <= t_end) if t_ng is not None else None
+
+    panel_idx = 0
+
+    # Helper to plot a bus of input nodes
+    def _plot_bus(ax, nodes, title):
+        nonlocal panel_idx
+        for i, node in enumerate(nodes):
+            offset = i * 1.5
+            if vacask_data and t_vac is not None and mask_vac is not None and node in vacask_data:
+                ax.plot(t_vac[mask_vac] * time_scale, vacask_data[node][mask_vac] + offset,
+                        "b-", lw=0.8, alpha=0.8, label=f"VAC {node}" if i < 2 else None)
+            ng_v = _get_ngspice_voltage(ngspice_data, node)
+            if ng_v is not None and t_ng is not None and mask_ng is not None:
+                ax.plot(t_ng[mask_ng] * time_scale, ng_v[mask_ng] + offset,
+                        "g--", lw=0.8, alpha=0.8, label=f"NG {node}" if i < 2 else None)
+            jax_v = jax_voltages.get(node)
+            if jax_v is None:
+                jax_v = jax_voltages.get(f"top.{node}")
+            if jax_v is not None:
+                ax.plot(jax_times[mask_jax] * time_scale, jax_v[mask_jax] + offset,
+                        "r:", lw=0.8, alpha=0.8, label=f"VAJAX {node}" if i < 2 else None)
+        ax.set_ylabel(f"{title} [V + offset]", fontsize=11)
+        ax.set_title(f"{config.name}: {title}", fontsize=12, fontweight="bold")
+        ax.grid(True, alpha=0.3)
+        ax.legend(loc="upper right", ncol=4, fontsize=8)
+        panel_idx += 1
+
+    # Input bus panels
+    if plot_cfg.input_nodes_a:
+        _plot_bus(axes[panel_idx], plot_cfg.input_nodes_a, "Input Bus A")
+    if plot_cfg.input_nodes_b:
+        _plot_bus(axes[panel_idx], plot_cfg.input_nodes_b, "Input Bus B")
+
+    # Output voltage panel
+    ax = axes[panel_idx]
+    for i, v_node in enumerate(plot_cfg.voltage_nodes):
+        vac_node = v_node.split(".")[-1]  # Short name for VACASK
+        offset = i * 1.5
+
+        if vacask_data and t_vac is not None and mask_vac is not None and vac_node in vacask_data:
+            ax.plot(t_vac[mask_vac] * time_scale, vacask_data[vac_node][mask_vac] + offset,
+                    "b-", lw=0.8, alpha=0.8, label=f"VAC {vac_node}" if i < 2 else None)
+        ng_v = _get_ngspice_voltage(ngspice_data, vac_node)
+        if ng_v is not None and t_ng is not None and mask_ng is not None:
+            ax.plot(t_ng[mask_ng] * time_scale, ng_v[mask_ng] + offset,
+                    "g--", lw=0.8, alpha=0.8, label=f"NG {vac_node}" if i < 2 else None)
+        jax_v = jax_voltages.get(v_node)
+        if jax_v is None:
+            jax_v = jax_voltages.get(vac_node)
+        if jax_v is not None:
+            ax.plot(jax_times[mask_jax] * time_scale, jax_v[mask_jax] + offset,
+                    "r:", lw=0.8, alpha=0.8, label=f"VAJAX {vac_node}" if i < 2 else None)
+
+    node_labels = ", ".join(n.split(".")[-1] for n in plot_cfg.voltage_nodes[:3])
+    ax.set_ylabel("Output [V + offset]", fontsize=11)
+    ax.set_title(f"Output ({node_labels}{'...' if len(plot_cfg.voltage_nodes) > 3 else ''})",
+                 fontsize=12)
+    ax.legend(loc="upper right", fontsize=9, ncol=4)
+    ax.grid(True, alpha=0.3)
+    panel_idx += 1
+
+    # Current panel
+    ax = axes[panel_idx]
+    src = plot_cfg.current_source
+    if vacask_data is not None and t_vac is not None and mask_vac is not None:
+        I_vac = vacask_data.get(f"{src}:flow(br)")
+        if I_vac is not None:
+            ax.plot(t_vac[mask_vac] * time_scale, I_vac[mask_vac] * 1e6,
+                    "b-", lw=1.5, label="VACASK", alpha=0.9)
+    if ngspice_data is not None and t_ng is not None and mask_ng is not None:
+        I_ng = ngspice_data.get(f"i({src})")
+        if I_ng is None:
+            I_ng = ngspice_data.get(f"{src}#branch")
+        if I_ng is not None:
+            ax.plot(t_ng[mask_ng] * time_scale, I_ng[mask_ng] * 1e6,
+                    "g--", lw=1.5, label="ngspice", alpha=0.9)
+    I_jax = jax_currents.get(src)
+    if I_jax is not None:
+        ax.plot(jax_times[mask_jax] * time_scale, I_jax[mask_jax] * 1e6,
+                "r:", lw=1.5, label="VAJAX", alpha=0.9)
+
+    ax.set_ylabel(f"I({src}) [uA]", fontsize=11)
+    ax.set_xlabel(f"Time [{time_unit}]", fontsize=11)
+    ax.legend(loc="lower right", fontsize=9)
+    ax.grid(True, alpha=0.3)
+
+    plt.tight_layout()
+    plt.savefig(output_file, dpi=150, bbox_inches="tight")
+    plt.close()
+    print(f"  Plot saved: {output_file}")
+
 
 # VA source locations for OSDI compilation
 # Maps OSDI filename patterns to VA source paths (relative to project root)
@@ -204,29 +526,13 @@ PROJECT_ROOT = Path(__file__).parent.parent
 
 
 def _find_openvaf_r() -> Optional[Path]:
-    """Find the openvaf-r compiler binary."""
-    # Check OPENVAF_DIR env var first (set in CI)
-    openvaf_dir = os.environ.get("OPENVAF_DIR")
-    if openvaf_dir:
-        binary = Path(openvaf_dir) / "openvaf-r"
-        if binary.exists():
-            return binary
+    """Find the openvaf-r compiler binary.
 
-    # Check common build locations
-    for candidate in [
-        PROJECT_ROOT / "vendor" / "OpenVAF" / "target" / "release" / "openvaf-r",
-    ]:
-        if candidate.exists():
-            return candidate
+    Delegates to ensure_openvaf() for consolidated search and build logic.
+    """
+    from vajax.utils.openvaf_build import ensure_openvaf
 
-    # Check PATH
-    import shutil
-
-    path_bin = shutil.which("openvaf-r")
-    if path_bin:
-        return Path(path_bin)
-
-    return None
+    return ensure_openvaf(build_if_missing=True)
 
 
 def ensure_osdi_files(config: BenchmarkInfo) -> bool:
@@ -586,6 +892,27 @@ def main():
         default=None,
         help="Write benchmark results as JSON to this path",
     )
+    parser.add_argument(
+        "--plot",
+        action="store_true",
+        help="Generate three-way comparison plots (VACASK vs VAJAX vs ngspice)",
+    )
+    parser.add_argument(
+        "--plot-dir",
+        type=str,
+        default="/tmp/vajax-plots",
+        help="Directory to save comparison plots (default: /tmp/vajax-plots)",
+    )
+    parser.add_argument(
+        "--skip-ngspice",
+        action="store_true",
+        help="Skip ngspice in three-way comparison plots",
+    )
+    parser.add_argument(
+        "--skip-vacask-plot",
+        action="store_true",
+        help="Skip VACASK in three-way comparison plots (still runs for perf)",
+    )
     args = parser.parse_args()
 
     print("=" * 70)
@@ -887,6 +1214,54 @@ def main():
         print(f"| {r['name']:9} | {startup_s:11.1f} | {speedup_str:16} | {breakeven_str:15} |")
 
     print()
+
+    # Three-way comparison plots
+    if args.plot:
+        plot_dir = Path(args.plot_dir)
+        plot_dir.mkdir(parents=True, exist_ok=True)
+        print("=" * 70)
+        print("Three-way comparison plots")
+        print("=" * 70)
+
+        for name in benchmark_names:
+            config = get_benchmark(name)
+            if config is None or config.skip:
+                continue
+            plot_cfg = PLOT_CONFIGS.get(name)
+            if plot_cfg is None:
+                print(f"\n  {name}: no plot config, skipping")
+                continue
+
+            print(f"\n--- {name} ---")
+
+            # Ensure OSDI files are compiled for VACASK/ngspice
+            ensure_osdi_files(config)
+
+            # Run simulators for plot data
+            vacask_data = None
+            ngspice_data = None
+
+            if not args.skip_vacask_plot:
+                vacask_data = _run_vacask_for_plot(config, plot_dir)
+            if not args.skip_ngspice:
+                ngspice_data = _run_ngspice_for_plot(config, plot_dir)
+
+            use_sparse = args.use_sparse or (config.is_large and not args.force_dense)
+            jax_result = _run_vajax_for_plot(config, plot_cfg, use_sparse=use_sparse)
+            if jax_result is None:
+                print(f"  VAJAX failed for {name}, skipping plot")
+                continue
+
+            jax_times, jax_voltages, jax_currents = jax_result
+            output_file = plot_dir / f"{name}_three_way_comparison.png"
+            plot_three_way(
+                config, plot_cfg,
+                vacask_data, ngspice_data,
+                jax_times, jax_voltages, jax_currents,
+                output_file,
+            )
+
+        print()
 
     # Write JSON output if requested
     if args.json_output:
