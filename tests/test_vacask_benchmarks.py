@@ -395,6 +395,7 @@ class ComparisonSpec:
     align_on_rising_edge: bool = False  # Align waveforms on rising edge before comparison
     align_threshold: float = 0.6  # Voltage threshold for rising edge detection
     align_after_time: float = 0.0  # Only use edges after this time (skip startup)
+    ci_max_steps: Optional[int] = None  # Per-benchmark step limit for CI (overrides VAJAX_MAX_STEPS)
     # Adaptive timestep is always used (matches VACASK behavior)
 
 
@@ -424,6 +425,7 @@ COMPARISON_SPECS = {
         align_on_rising_edge=True,
         align_threshold=0.6,
         align_after_time=10e-9,  # Skip first 10ns startup
+        ci_max_steps=10000,  # 500ps covers ~one oscillation period at ~2ns
         # Period validated separately in test_adaptive_ring_validation.py
     ),
     "mul": ComparisonSpec(
@@ -432,12 +434,14 @@ COMPARISON_SPECS = {
         max_rel_error=0.015,
         vacask_nodes=["1", "v(1)"],
         jax_nodes=["1"],
+        ci_max_steps=50000,  # 500us — past worst startup transient of 5ms sim
     ),
     "c6288": ComparisonSpec(
         benchmark_name="c6288",
         max_rel_error=0.10,
         vacask_nodes=["v(p0)", "p0"],
         jax_nodes=["top.p0"],
+        ci_max_steps=10000,
     ),
 }
 
@@ -565,14 +569,16 @@ class TestVACASKResultComparison:
         info = get_benchmark(benchmark_name)
         assert info is not None, f"Benchmark {benchmark_name} not found in registry"
 
-        # Apply MAX_STEPS limit for CI if set
+        # Apply step limit for CI: per-benchmark ci_max_steps overrides VAJAX_MAX_STEPS
         t_stop = info.t_stop
         dt = info.dt
         if MAX_STEPS_ENV > 0:
-            max_t_stop = dt * MAX_STEPS_ENV
+            effective_max_steps = spec.ci_max_steps if spec.ci_max_steps is not None else MAX_STEPS_ENV
+            max_t_stop = dt * effective_max_steps
             if t_stop > max_t_stop:
                 logger.info(
-                    f"Limiting steps from {int(t_stop / dt):,} to {MAX_STEPS_ENV:,} (VAJAX_MAX_STEPS)"
+                    f"Limiting steps from {int(t_stop / dt):,} to {effective_max_steps:,}"
+                    f" ({'ci_max_steps' if spec.ci_max_steps is not None else 'VAJAX_MAX_STEPS'})"
                 )
                 t_stop = max_t_stop
 
