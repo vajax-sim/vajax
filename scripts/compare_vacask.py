@@ -38,6 +38,7 @@ enable_performance_logging(with_memory=True, with_perf_counter=True)
 import re
 import sys
 import time
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 
@@ -183,14 +184,11 @@ VACASK_REFERENCE_TIMES = {
 }
 
 
-from dataclasses import dataclass
-
 import numpy as np
 
 from vajax.utils import find_ngspice_binary, find_vacask_binary, rawread
 from vajax.utils import run_ngspice as run_ngspice_util
 from vajax.utils import run_vacask as run_vacask_util
-
 
 # =============================================================================
 # Three-way comparison plotting (VACASK vs VAJAX vs ngspice)
