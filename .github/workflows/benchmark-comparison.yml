@@ -6,6 +6,26 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      benchmarks:
+        description: 'Comma-separated benchmark list (empty = use matrix defaults)'
+        required: false
+        default: ''
+      solver:
+        description: 'Solver backend to run'
+        type: choice
+        options: [both, dense, sparse]
+        default: both
+      platform:
+        description: 'Execution platform'
+        type: choice
+        options: [both, cpu, cuda]
+        default: both
+      precision:
+        description: 'Dense linear-solve precision (f64 = current, f32 = iterative refinement, auto = backend default)'
+        type: choice
+        options: [f64, f32, auto]
+        default: f64
   schedule:
     - cron: '0 6 * * *'  # Daily at 6am UTC
 
@@ -15,21 +35,50 @@ env:
   JAX_COMPILATION_CACHE_DIR: /tmp/jax-xla-cache
 
 jobs:
+  # Build the matrix JSON dynamically. For push/PR/schedule we always run the
+  # full 4-way matrix. For workflow_dispatch we filter based on the user's
+  # solver/platform inputs. The `matrix` context is not available in
+  # job-level `if:` expressions, so we have to filter the matrix itself.
+  configure:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.build.outputs.matrix }}
+    steps:
+      - name: Build matrix JSON
+        id: build
+        env:
+          SOLVER: ${{ github.event.inputs.solver || 'both' }}
+          PLATFORM: ${{ github.event.inputs.platform || 'both' }}
+        run: |
+          # All four combinations with their per-entry metadata.
+          ALL='[
+            {"solver":"dense","platform":"cpu","runner":"ubuntu-latest","benchmarks":"rc,graetz,mul,ring,tb_dp"},
+            {"solver":"dense","platform":"cuda","runner":"nvidia-runner-1","benchmarks":"rc,graetz,mul,ring,tb_dp"},
+            {"solver":"sparse","platform":"cpu","runner":"ubuntu-latest","benchmarks":"c6288,mul64"},
+            {"solver":"sparse","platform":"cuda","runner":"nvidia-runner-1","benchmarks":"c6288,mul64"}
+          ]'
+
+          FILTERED=$(echo "$ALL" | python3 -c '
+          import json, os, sys
+          entries = json.load(sys.stdin)
+          solver = os.environ["SOLVER"]
+          platform = os.environ["PLATFORM"]
+          out = [
+              e for e in entries
+              if (solver == "both" or e["solver"] == solver)
+              and (platform == "both" or e["platform"] == platform)
+          ]
+          print(json.dumps({"include": out}))
+          ')
+
+          echo "matrix=$FILTERED" >> "$GITHUB_OUTPUT"
+          echo "Resolved matrix: $FILTERED"
+
   benchmark:
+    needs: configure
     strategy:
       fail-fast: false
-      matrix:
-        solver: [dense, sparse]
-        platform: [cpu, cuda]
-        include:
-          - solver: dense
-            benchmarks: "rc,graetz,mul,ring,tb_dp"
-          - solver: sparse
-            benchmarks: "c6288,mul64"
-          - platform: cpu
-            runner: ubuntu-latest
-          - platform: cuda
-            runner: nvidia-runner-1
+      matrix: ${{ fromJSON(needs.configure.outputs.matrix) }}
 
     name: benchmark (${{ matrix.solver }}-${{ matrix.platform }})
     runs-on: ${{ matrix.runner }}
@@ -42,6 +91,21 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
+
+      # Resolve the effective benchmark list and precision up front so all
+      # downstream steps (run, recompile check, summary) see the same values.
+      - name: Resolve dispatch inputs
+        env:
+          INPUT_BENCHMARKS: ${{ github.event.inputs.benchmarks }}
+          MATRIX_BENCHMARKS: ${{ matrix.benchmarks }}
+          INPUT_PRECISION: ${{ github.event.inputs.precision }}
+        run: |
+          EFFECTIVE_BENCHMARKS="${INPUT_BENCHMARKS:-$MATRIX_BENCHMARKS}"
+          EFFECTIVE_PRECISION="${INPUT_PRECISION:-f64}"
+          echo "EFFECTIVE_BENCHMARKS=$EFFECTIVE_BENCHMARKS" >> "$GITHUB_ENV"
+          echo "EFFECTIVE_PRECISION=$EFFECTIVE_PRECISION" >> "$GITHUB_ENV"
+          echo "Effective benchmarks: $EFFECTIVE_BENCHMARKS"
+          echo "Effective precision:  $EFFECTIVE_PRECISION"
 
       # ── CUDA diagnostics ─────────────────────────────────────────
       - name: CUDA environment diagnostics
@@ -345,6 +409,10 @@ jobs:
           XLA_PYTHON_CLIENT_ALLOCATOR: ${{ matrix.platform == 'cuda' && 'platform' || '' }}
           TF_CPP_MIN_LOG_LEVEL: ${{ matrix.platform == 'cuda' && '2' || '' }}
           VACASK_BIN: ${{ github.workspace }}/vendor/VACASK/build/simulator/vacask
+          # Dense linear-solve precision (read by solver_factories.py once
+          # the f32-iterative-refinement path lands). Currently a no-op for
+          # triggers other than workflow_dispatch.
+          VAJAX_DENSE_SOLVE_DTYPE: ${{ env.EFFECTIVE_PRECISION }}
         run: |
           SPARSE_FLAG=""
           GPU_FLAG=""
@@ -362,11 +430,12 @@ jobs:
           fi
 
           echo "Running benchmarks (${{ matrix.solver }}-${{ matrix.platform }})..."
-          echo "Benchmarks: ${{ matrix.benchmarks }}"
+          echo "Benchmarks: $EFFECTIVE_BENCHMARKS"
+          echo "VAJAX_DENSE_SOLVE_DTYPE: $VAJAX_DENSE_SOLVE_DTYPE"
 
           set +e
           uv run python scripts/compare_vacask.py \
-            --benchmark ${{ matrix.benchmarks }} \
+            --benchmark "$EFFECTIVE_BENCHMARKS" \
             --use-scan \
             $SPARSE_FLAG \
             $GPU_FLAG \
@@ -399,7 +468,7 @@ jobs:
             TOTAL=$(grep -c "Finished XLA compilation" /tmp/benchmark-comparison.log 2>/dev/null || echo 0)
             echo "Total XLA compilations: $TOTAL"
 
-            N_BENCHMARKS=$(echo "${{ matrix.benchmarks }}" | tr ',' '\n' | wc -l | tr -d ' ')
+            N_BENCHMARKS=$(echo "$EFFECTIVE_BENCHMARKS" | tr ',' '\n' | wc -l | tr -d ' ')
             echo "Benchmarks in this job: $N_BENCHMARKS"
 
             SIMULATION_FNS=$(grep "Finished XLA compilation" /tmp/benchmark-comparison.log 2>/dev/null | \
@@ -455,7 +524,8 @@ jobs:
             echo "- **JAX Backend**: ${{ matrix.platform }}"
             echo "- **Solver**: ${{ matrix.solver }}"
             echo "- **Mode**: lax.scan (JIT-compiled)"
-            echo "- **Benchmarks**: ${{ matrix.benchmarks }}"
+            echo "- **Benchmarks**: ${EFFECTIVE_BENCHMARKS}"
+            echo "- **Dense precision**: ${EFFECTIVE_PRECISION}"
             echo ""
 
             # VACASK result accuracy (CPU dense only)
