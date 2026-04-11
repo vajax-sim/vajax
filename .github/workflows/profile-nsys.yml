@@ -12,6 +12,7 @@ on:
           - mul
           - ring
           - c6288
+          - tb_dp
         default: ring
       timesteps:
         description: 'Number of timesteps'
@@ -146,14 +147,34 @@ jobs:
             echo "**Sparse:** ${{ inputs.sparse }}"
             echo "**Commit:** \`${{ github.sha }}\`"
             echo ""
-            if [ -f "/tmp/${profile_name}.nsys-rep" ]; then
-              echo "### Profile Summary"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          REPORT="/tmp/${profile_name}.nsys-rep"
+          if [ ! -f "$REPORT" ]; then
+            echo "_No nsys report found_" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          # Run each report; errors (e.g. missing traces) don't fail the step
+          run_report() {
+            local title="$1"
+            local name="$2"
+            local lines="${3:-25}"
+            {
+              echo "### ${title}"
               echo ""
               echo '```'
-              nsys stats "/tmp/${profile_name}.nsys-rep" --report cuda_gpu_kern_sum 2>&1 | head -40 || true
+              nsys stats "$REPORT" --report "$name" 2>&1 | head -"$lines" || true
               echo '```'
-            fi
-          } >> "$GITHUB_STEP_SUMMARY"
+              echo ""
+            } >> "$GITHUB_STEP_SUMMARY"
+          }
+
+          run_report "GPU Kernel Summary"           cuda_gpu_kern_sum 40
+          run_report "CUDA API Summary (launch/sync overhead)" cuda_api_sum 30
+          run_report "OS Runtime Summary"           osrt_sum 30
+          run_report "GPU Memory Ops"               cuda_gpu_mem_time_sum 20
+          run_report "NVTX / XLA Op Summary"        nvtx_sum 40
 
       - name: Upload nsys report
         if: always()

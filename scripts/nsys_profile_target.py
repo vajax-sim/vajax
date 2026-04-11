@@ -38,7 +38,7 @@ def main():
         "circuit",
         nargs="?",
         default="ring",
-        choices=["rc", "graetz", "mul", "ring", "c6288"],
+        choices=["rc", "graetz", "mul", "ring", "c6288", "tb_dp"],
         help="Circuit to profile (default: ring)",
     )
     parser.add_argument(
@@ -70,10 +70,20 @@ def main():
     # Find benchmark .sim file
     script_dir = Path(__file__).parent
     repo_root = script_dir.parent
-    sim_path = repo_root / "vendor" / "VACASK" / "benchmark" / args.circuit / "vacask" / "runme.sim"
 
-    if not sim_path.exists():
-        print(f"ERROR: Benchmark file not found: {sim_path}")
+    # VACASK benchmarks live under vendor/VACASK; additional vajax-only
+    # benchmarks (like tb_dp) live under vajax/benchmarks/data/.
+    candidates = [
+        repo_root / "vendor" / "VACASK" / "benchmark" / args.circuit / "vacask" / "runme.sim",
+        repo_root / "vajax" / "benchmarks" / "data" / args.circuit / f"{args.circuit}512x8_klu.sim",
+        repo_root / "vajax" / "benchmarks" / "data" / args.circuit / "runme.sim",
+    ]
+    sim_path = next((p for p in candidates if p.exists()), None)
+
+    if sim_path is None:
+        print(f"ERROR: Benchmark file not found for {args.circuit}. Searched:")
+        for c in candidates:
+            print(f"  - {c}")
         sys.exit(1)
 
     # Setup circuit using CircuitEngine
@@ -89,19 +99,25 @@ def main():
     print(f"Using dt={dt}")
     print()
 
-    # Prepare (includes 1-step JIT warmup)
-    print(f"Preparing ({args.timesteps} timesteps, includes JIT warmup)...")
-    engine.prepare(
-        t_stop=args.timesteps * dt,
-        dt=dt,
-        use_sparse=args.sparse,
-    )
-    print("Prepare complete")
-    print()
+    # Phase annotations — show up as NVTX ranges in nsys timeline so
+    # warmup/compile can be separated from steady-state stepping.
+    from jax.profiler import TraceAnnotation
 
-    # Profiled run - nsys-jax captures this automatically
-    print(f"Starting profiled run ({args.timesteps} timesteps)...")
-    result = engine.run_transient()
+    with TraceAnnotation("vajax_prepare"):
+        print(f"Preparing ({args.timesteps} timesteps, includes JIT warmup)...")
+        print(f"Forcing backend={args.backend} (bypasses 500-node auto-route threshold)")
+        engine.prepare(
+            t_stop=args.timesteps * dt,
+            dt=dt,
+            use_sparse=args.sparse,
+            backend=args.backend,
+        )
+        print("Prepare complete")
+        print()
+
+    with TraceAnnotation("vajax_run_transient"):
+        print(f"Starting profiled run ({args.timesteps} timesteps)...")
+        result = engine.run_transient()
 
     print()
     print(f"Completed: {result.num_steps} timesteps")
