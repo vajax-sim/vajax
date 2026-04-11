@@ -155,19 +155,23 @@ jobs:
             exit 0
           fi
 
-          # Run each report; errors (e.g. missing traces) don't fail the step
+          # Run each report; errors (e.g. missing traces) don't fail the step.
+          # Capture output once, then tee to both the step summary and stdout
+          # so the log is greppable from `gh run view --log`.
           run_report() {
             local title="$1"
             local name="$2"
             local lines="${3:-25}"
+            local output
+            output=$(nsys stats "$REPORT" --report "$name" 2>&1 | head -"$lines" || true)
             {
               echo "### ${title}"
               echo ""
               echo '```'
-              nsys stats "$REPORT" --report "$name" 2>&1 | head -"$lines" || true
+              echo "$output"
               echo '```'
               echo ""
-            } >> "$GITHUB_STEP_SUMMARY"
+            } | tee -a "$GITHUB_STEP_SUMMARY"
           }
 
           run_report "GPU Kernel Summary"           cuda_gpu_kern_sum 40
