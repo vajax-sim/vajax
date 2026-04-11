@@ -113,6 +113,12 @@ jobs:
           XLA_PYTHON_CLIENT_PREALLOCATE: "false"
           XLA_PYTHON_CLIENT_ALLOCATOR: platform
           TF_CPP_MIN_LOG_LEVEL: "2"
+          # Disable in-loop progress reporting. The default progress_interval=100
+          # wraps a jax.debug.callback in a lax.cond inside the compiled while
+          # body, which forces XLA-GPU into host-ordered execution and adds
+          # ~1.3 s/step of serialization overhead. This env var causes
+          # progress_interval to default to 0, which skips the cond entirely.
+          VAJAX_NO_PROGRESS: "1"
         run: |
           SPARSE_FLAG=""
           if [ "${{ inputs.sparse }}" = "true" ]; then
