@@ -403,6 +403,23 @@ class FullMNAStrategy(TransientStrategy):
             self._total_limit_states = total_limit_states
             build_system_jit = jax.jit(build_system_fn)
 
+            # Dense linear-solve precision: VAJAX_DENSE_SOLVE_DTYPE selects
+            # between f64 (default), f32 (LU in float32 with one iterative
+            # refinement step in float64), or auto (currently always f64).
+            # f32 mode is useful on hardware with weak FP64 throughput
+            # (consumer NVIDIA cards, datacenter inference accelerators).
+            import os
+
+            dense_dtype = os.environ.get("VAJAX_DENSE_SOLVE_DTYPE", "f64").lower()
+            factorize_f32 = dense_dtype == "f32"
+            if dense_dtype not in ("f64", "f32", "auto"):
+                logger.warning(
+                    f"VAJAX_DENSE_SOLVE_DTYPE={dense_dtype} not recognized, "
+                    "expected one of f64|f32|auto. Defaulting to f64."
+                )
+            elif dense_dtype != "f64":
+                logger.info(f"Dense solver precision override: VAJAX_DENSE_SOLVE_DTYPE={dense_dtype}")
+
             nr_solve = make_dense_full_mna_solver(
                 build_system_jit,
                 n_nodes,
@@ -415,6 +432,7 @@ class FullMNAStrategy(TransientStrategy):
                 options=self.runner.options,
                 use_fori_loop=use_fori,
                 max_nr_iters=self.runner.options.max_nr_iters,
+                factorize_f32=factorize_f32,
             )
         else:
             # Sparse path: use CSR direct stamping to eliminate COO intermediates

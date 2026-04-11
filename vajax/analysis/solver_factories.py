@@ -727,6 +727,47 @@ def _make_nr_solver_common(
     return nr_solve
 
 
+def _with_iterative_refinement(
+    nr_solve_low_fn: Callable,
+    matvec_fn: Callable,
+    low_dtype=jnp.float32,
+) -> Callable:
+    """Wrap a low-precision NR linear solve with one iterative refinement step.
+
+    Given an NR system ``J @ delta = -f``:
+        1. ``delta_low = solve_low(J_low, f_low)``       (initial low-precision solve)
+        2. ``r = f + J @ delta_high``                    (residual in high precision)
+        3. ``correction = solve_low(J_low, r_low)``      (low-precision correction)
+        4. ``return delta_high + correction``            (refined solution)
+
+    The wrapped low-precision solver must already encode the NR sign convention
+    (i.e. it returns ``-J^{-1} f``, not ``J^{-1} f``).
+
+    Args:
+        nr_solve_low_fn: ``(J_low, f_low) -> delta_low`` returning the NR step
+            in the low precision (handles the negation internally).
+        matvec_fn: ``(J_high, x) -> J @ x`` performing the high-precision
+            matrix-vector product. Used to compute the residual.
+        low_dtype: Working dtype for the factorization (default float32).
+
+    Returns:
+        ``(J, f) -> delta`` callable that performs the refined solve.
+    """
+    def refined_solve(J, f):
+        high_dtype = f.dtype
+        J_low = J.astype(low_dtype)
+        # Initial solve in low precision
+        delta_low = nr_solve_low_fn(J_low, f.astype(low_dtype))
+        delta_high = delta_low.astype(high_dtype)
+        # Residual computed in high precision: r = f + J @ delta
+        r = f + matvec_fn(J, delta_high)
+        # Correction solve in low precision
+        correction_low = nr_solve_low_fn(J_low, r.astype(low_dtype))
+        return delta_high + correction_low.astype(high_dtype)
+
+    return refined_solve
+
+
 def make_dense_full_mna_solver(
     build_system_jit: Callable,
     n_nodes: int,
@@ -740,6 +781,7 @@ def make_dense_full_mna_solver(
     max_step: float = 1e30,
     use_fori_loop: bool = False,
     max_nr_iters: Optional[int] = None,
+    factorize_f32: bool = False,
 ) -> Callable:
     """Create a JIT-compiled dense NR solver for full MNA formulation.
 
@@ -757,6 +799,11 @@ def make_dense_full_mna_solver(
         abstol: Absolute tolerance for convergence
         options: SimulationOptions for NR damping and other solver parameters
         max_step: Maximum voltage change per NR iteration
+        factorize_f32: Factorize in float32 with one iterative-refinement
+            step in float64. Halves the LU memory footprint and is much
+            faster on hardware with weak FP64 throughput (e.g. consumer
+            NVIDIA cards, datacenter inference accelerators). The refinement
+            step recovers near-float64 accuracy.
 
     Returns:
         JIT-compiled solver function
@@ -781,15 +828,29 @@ def make_dense_full_mna_solver(
             f = f.at[noi_res_idx].set(0.0)
         return J, f
 
-    def linear_solve(J, f):
-        """Solve J @ delta = -f using dense direct solver."""
-        # Add Tikhonov regularization for numerical stability on GPU
-        reg = 1e-14 * jnp.eye(J.shape[0], dtype=J.dtype)
-        return jax.scipy.linalg.solve(J + reg, -f)
+    if factorize_f32:
+        # No Tikhonov regularization in f32: any reg large enough to be
+        # numerically meaningful in float32 (>~1e-7) would dominate diode
+        # off-state conductances (~1e-12), breaking diode-bridge circuits.
+        # Iterative refinement is responsible for recovering accuracy.
+        def _dense_solve_low(J_low, f_low):
+            return jax.scipy.linalg.solve(J_low, -f_low)
 
+        def _dense_matvec(J, x):
+            return J @ x
+
+        linear_solve = _with_iterative_refinement(_dense_solve_low, _dense_matvec)
+    else:
+        def linear_solve(J, f):
+            """Solve J @ delta = -f using dense direct solver."""
+            # Add Tikhonov regularization for numerical stability on GPU
+            reg = 1e-14 * jnp.eye(J.shape[0], dtype=J.dtype)
+            return jax.scipy.linalg.solve(J + reg, -f)
+
+    precision_str = "f32+refinement" if factorize_f32 else "f64"
     logger.info(
         f"Creating dense full MNA solver: V({n_nodes}) + I({n_vsources}), "
-        f"NOI: {noi_indices is not None}"
+        f"NOI: {noi_indices is not None}, precision={precision_str}"
     )
     return _make_nr_solver_common(
         build_system_jit=build_system_jit,
