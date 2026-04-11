@@ -250,7 +250,7 @@ def _make_nr_solver_common(
         res_tol_floor,
     ):
         """Common NR iteration body shared by while_loop and fori_loop modes."""
-        J_or_data, f, Q, _, limit_state_out, max_res_contrib = build_system_jit(
+        J_or_data, f, Q, I_vsource, limit_state_out, max_res_contrib = build_system_jit(
             X,
             vsource_vals,
             isource_vals,
@@ -322,7 +322,16 @@ def _make_nr_solver_common(
             limit_settled = limit_delta < limit_ref
             this_converged = this_converged & limit_settled & (iteration >= 1)
 
-        return (X_candidate, this_converged, max_f, max_delta, Q, limit_state_out)
+        return (
+            X_candidate,
+            this_converged,
+            max_f,
+            max_delta,
+            Q,
+            limit_state_out,
+            I_vsource,
+            max_res_contrib,
+        )
 
     if use_fori_loop:
         # --- fori_loop mode: fixed iteration count, no early exit ---
@@ -353,29 +362,36 @@ def _make_nr_solver_common(
                 res_tol_floor,
             ) = state
 
-            X_candidate, this_converged, new_max_f, new_max_delta, Q_new, limit_state_new = (
-                _nr_body_common(
-                    iteration,
-                    X,
-                    converged,
-                    max_f,
-                    max_delta,
-                    Q_iter,
-                    limit_state,
-                    vsource_vals,
-                    isource_vals,
-                    Q_prev,
-                    integ_c0,
-                    device_arrays_arg,
-                    gmin,
-                    gshunt,
-                    integ_c1,
-                    integ_d1,
-                    _dQdt_prev,
-                    integ_c2,
-                    _Q_prev2,
-                    res_tol_floor,
-                )
+            (
+                X_candidate,
+                this_converged,
+                new_max_f,
+                new_max_delta,
+                Q_new,
+                limit_state_new,
+                _I_vsource_unused,
+                _mrc_unused,
+            ) = _nr_body_common(
+                iteration,
+                X,
+                converged,
+                max_f,
+                max_delta,
+                Q_iter,
+                limit_state,
+                vsource_vals,
+                isource_vals,
+                Q_prev,
+                integ_c0,
+                device_arrays_arg,
+                gmin,
+                gshunt,
+                integ_c1,
+                integ_d1,
+                _dQdt_prev,
+                integ_c2,
+                _Q_prev2,
+                res_tol_floor,
             )
 
             # Update convergence flag (once converged, stays converged)
@@ -528,7 +544,8 @@ def _make_nr_solver_common(
         # Original behavior: exits as soon as convergence is detected.
 
         def cond_fn(state):
-            _, iteration, converged, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _ = state
+            iteration = state[1]
+            converged = state[2]
             return jnp.logical_and(~converged, iteration < max_iterations)
 
         def body_fn(state):
@@ -540,6 +557,8 @@ def _make_nr_solver_common(
                 _,
                 _,
                 limit_state,
+                _I_vsource_prev,
+                _mrc_prev,
                 vsource_vals,
                 isource_vals,
                 Q_prev,
@@ -555,7 +574,16 @@ def _make_nr_solver_common(
                 res_tol_floor,
             ) = state
 
-            X_new, converged, max_f, max_delta, Q, limit_state_out = _nr_body_common(
+            (
+                X_new,
+                converged,
+                max_f,
+                max_delta,
+                Q,
+                limit_state_out,
+                I_vsource_out,
+                max_res_contrib_out,
+            ) = _nr_body_common(
                 iteration,
                 X,
                 jnp.array(False),
@@ -586,6 +614,8 @@ def _make_nr_solver_common(
                 max_delta,
                 Q,
                 limit_state_out,
+                I_vsource_out,
+                max_res_contrib_out,
                 vsource_vals,
                 isource_vals,
                 Q_prev,
@@ -639,6 +669,8 @@ def _make_nr_solver_common(
             _integ_c2 = jnp.asarray(integ_c2, dtype=fdtype)
 
             init_Q = jnp.zeros(n_unknowns, dtype=fdtype)
+            init_I_vsource = jnp.zeros(n_vsources, dtype=fdtype)
+            init_mrc = jnp.zeros(n_unknowns, dtype=fdtype)
             init_state = (
                 X_init,
                 jnp.array(0, dtype=jnp.int32),
@@ -647,6 +679,8 @@ def _make_nr_solver_common(
                 jnp.array(jnp.inf),
                 init_Q,
                 _limit_state,
+                init_I_vsource,
+                init_mrc,
                 vsource_vals,
                 isource_vals,
                 Q_prev,
@@ -663,46 +697,52 @@ def _make_nr_solver_common(
             )
 
             result_state = lax.while_loop(cond_fn, body_fn, init_state)
-            (
-                X_final,
-                iterations,
-                converged,
-                max_f,
-                _,
-                _,
-                limit_state_final,
-                _,
-                _,
-                _,
-                _,
-                _,
-                _,
-                _,
-                _,
-                _,
-                _,
-                _,
-                _,
-                _,
-            ) = result_state
+            X_final = result_state[0]
+            iterations = result_state[1]
+            converged = result_state[2]
+            max_f = result_state[3]
+            Q_state = result_state[5]
+            limit_state_final = result_state[6]
+            I_vsource_state = result_state[7]
+            mrc_state = result_state[8]
 
-            # Recompute Q and I_vsource from converged solution
-            _, _, Q_final, I_vsource, _, max_res_contrib_final = build_system_jit(
-                X_final,
-                vsource_vals,
-                isource_vals,
-                Q_prev,
-                _integ_c0,
-                device_arrays_arg,
-                _gmin,
-                _gshunt,
-                _integ_c1,
-                _integ_d1,
-                _dQdt_prev,
-                _integ_c2,
-                _Q_prev2,
-                limit_state_final,
-                iterations,
+            # Conditional recompute of Q / I_vsource / max_res_contrib at X_final.
+            #
+            # The loop's `Q_state` is computed at X_N (the iterate input to the
+            # converging build), while `X_final = X_N + delta_N`. For iter >= 1
+            # convergence, `delta_converged` enforces ||delta_N|| < vntol, so the
+            # Q lag is sub-µV * C and negligible. For iter == 0 convergence, the
+            # `(iteration == 0)` shortcut in delta_converged means delta_N can be
+            # mV-scale (bounded by res_tol/J_norm, not vntol), and the resulting
+            # Q lag accumulates into LTE polynomial bias. So we recompute only
+            # on the iter-0-converged path.
+            iter_zero_converged = iterations == jnp.int32(1)
+
+            def _do_recompute(_):
+                _, _, Q_r, I_v_r, _, mrc_r = build_system_jit(
+                    X_final,
+                    vsource_vals,
+                    isource_vals,
+                    Q_prev,
+                    _integ_c0,
+                    device_arrays_arg,
+                    _gmin,
+                    _gshunt,
+                    _integ_c1,
+                    _integ_d1,
+                    _dQdt_prev,
+                    _integ_c2,
+                    _Q_prev2,
+                    limit_state_final,
+                    iterations,
+                )
+                return Q_r, I_v_r, mrc_r
+
+            def _use_state(_):
+                return Q_state, I_vsource_state, mrc_state
+
+            Q_final, I_vsource, max_res_contrib_final = lax.cond(
+                iter_zero_converged, _do_recompute, _use_state, operand=None
             )
 
             dQdt_final = (
