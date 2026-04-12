@@ -183,22 +183,16 @@ class TestBenchmarkTransient:
         # Guard against dt-collapse: a wedged NR loop can rack up "accepted"
         # steps at dt=1e-15 while simulation time stays frozen. convergence_rate
         # alone doesn't catch this because the wedged steps *are* accepted.
-        #
-        # min_dt_used is the load-bearing signal: a healthy run never drops
-        # below the LTE floor, while dt-collapse drives it to the 1e-15 limit.
         min_dt_used = result.stats.get("min_dt_used", 0.0)
         assert min_dt_used > 1e-12, (
             f"dt-collapse: min_dt cratered to {min_dt_used:.1e} — "
             f"NR wedged on a step and the stepper halved dt to the floor"
         )
-        # Only require reaching t_stop for full benchmark runs. Short smoke
-        # tests (has_comparison=False) intentionally truncate via max_steps.
-        if has_comparison:
-            final_time = float(result.times[-1]) if len(result.times) > 0 else 0.0
-            assert final_time >= 0.99 * t_stop, (
-                f"Simulation stopped short: reached only t={final_time:.3e} "
-                f"(t_stop={t_stop:.3e}, {100 * final_time / t_stop:.1f}% complete)"
-            )
+        final_time = float(result.times[-1]) if len(result.times) > 0 else 0.0
+        assert final_time >= 0.99 * t_stop, (
+            f"Simulation stopped short: reached only t={final_time:.3e} "
+            f"(t_stop={t_stop:.3e}, {100 * final_time / t_stop:.1f}% complete)"
+        )
 
 
 # =============================================================================

@@ -871,8 +871,11 @@ class CircuitEngine:
         if dt is None:
             dt = float(self.analysis_params.get("step", 1e-6))
 
-        # Auto-compute max_steps with 10% headroom for LTE timestep reductions
-        max_steps = int(t_stop / dt * 1.1) + 10
+        # Auto-compute max_steps with headroom for LTE timestep reductions.
+        # Account for tran_fs initial scaling (default 0.25): the transient loop
+        # starts at dt * tran_fs, so we need ~1/tran_fs more steps to reach t_stop.
+        tran_fs = float(self.analysis_params.get("tran_fs", 0.25))
+        max_steps = int(t_stop / (dt * tran_fs) * 1.1) + 10
 
         # Select backend
         if use_sparse is None:
