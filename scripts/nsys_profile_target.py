@@ -22,6 +22,7 @@ Example:
 
 import argparse
 import sys
+import time
 from pathlib import Path
 
 import jax
@@ -29,7 +30,23 @@ import jax
 sys.path.insert(0, ".")
 
 # Import vajax first to auto-configure precision based on backend
+from vajax._logging import enable_performance_logging
 from vajax.analysis import CircuitEngine
+
+
+def phase_timer(name: str):
+    """Context manager that prints wall-clock timing for a named phase."""
+    import contextlib
+
+    @contextlib.contextmanager
+    def _timer():
+        t0 = time.perf_counter()
+        print(f"[PHASE] {name} — start")
+        yield
+        elapsed = time.perf_counter() - t0
+        print(f"[PHASE] {name} — {elapsed:.3f}s")
+
+    return _timer()
 
 
 def main():
@@ -60,6 +77,9 @@ def main():
         help="Use sparse solver (for large circuits)",
     )
     args = parser.parse_args()
+
+    # Enable perf_counter timestamps in logs so we can correlate with nsys timeline
+    enable_performance_logging(with_perf_counter=True)
 
     print(f"JAX backend: {jax.default_backend()}")
     print(f"JAX devices: {jax.devices()}")
@@ -103,7 +123,7 @@ def main():
     # warmup/compile can be separated from steady-state stepping.
     from jax.profiler import TraceAnnotation
 
-    with TraceAnnotation("vajax_prepare"):
+    with TraceAnnotation("vajax_prepare"), phase_timer("prepare"):
         print(f"Preparing ({args.timesteps} timesteps, includes JIT warmup)...")
         print(f"Forcing backend={args.backend} (bypasses 500-node auto-route threshold)")
         engine.prepare(
@@ -115,9 +135,14 @@ def main():
         print("Prepare complete")
         print()
 
-    with TraceAnnotation("vajax_run_transient"):
+    with TraceAnnotation("vajax_run_transient"), phase_timer("run_transient"):
         print(f"Starting profiled run ({args.timesteps} timesteps)...")
         result = engine.run_transient()
+
+    with phase_timer("block_until_ready"):
+        # Explicitly time the block_until_ready to see if the wall time
+        # is hiding in lazy evaluation / output materialization.
+        jax.block_until_ready(result.times)
 
     print()
     print(f"Completed: {result.num_steps} timesteps")

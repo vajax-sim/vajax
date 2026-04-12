@@ -135,7 +135,7 @@ jobs:
           echo "Commit: ${{ github.sha }}"
 
           nsys profile \
-            --trace=cuda,nvtx,osrt \
+            --trace=cuda,nvtx,osrt,pthread \
             --output "/tmp/${PROFILE_NAME}" \
             uv run python scripts/nsys_profile_target.py \
               ${{ inputs.circuit }} ${{ inputs.timesteps }} ${SPARSE_FLAG}
@@ -185,6 +185,29 @@ jobs:
           run_report "OS Runtime Summary"           osrt_sum 30
           run_report "GPU Memory Ops"               cuda_gpu_mem_time_sum 20
           run_report "NVTX / XLA Op Summary"        nvtx_sum 40
+
+          # Per-thread OS runtime breakdown — helps attribute the 500ms
+          # pthread_cond_timedwait pattern to a specific XLA/PjRt thread.
+          {
+            echo "### OS Runtime by Thread (top 500ms+ calls)"
+            echo ""
+            echo '```'
+            nsys stats "$REPORT" --report osrt_sum \
+              --format csv 2>/dev/null \
+              | awk -F',' 'NR>1 && $4+0 > 100000000 {print $0}' \
+              | head -40 || echo "(no data or nsys stats unavailable)"
+            echo '```'
+            echo ""
+
+            echo "### Pthread Summary"
+            echo ""
+            echo '```'
+            nsys stats "$REPORT" --report osrt_sum \
+              --format csv 2>/dev/null \
+              | grep -i "pthread" | head -20 || echo "(no pthread data — did you enable --trace=pthread?)"
+            echo '```'
+            echo ""
+          } | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Upload nsys report
         if: always()
