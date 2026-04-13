@@ -162,15 +162,17 @@ jobs:
             exit 0
           fi
 
-          echo "=== HLO dump files ==="
-          ls -la "$HLO_DIR"/ | head -30
+          echo "=== HLO dump subdirectories (top 20 by size) ==="
+          du -sh "$HLO_DIR"/jit_* 2>/dev/null | sort -rh | head -20
 
-          # Find the optimized HLO module (after all passes)
-          # XLA dumps multiple stages; we want the final one
-          OPTIMIZED=$(ls "$HLO_DIR"/*.after_optimizations.txt 2>/dev/null | tail -1 || true)
+          # XLA dumps each JIT module into its own subdirectory.
+          # Find the largest after_optimizations.txt — that's the main transient module.
+          OPTIMIZED=$(find "$HLO_DIR" -name "*.after_optimizations.txt" -exec wc -c {} + 2>/dev/null \
+            | grep -v ' total$' | sort -rn | head -1 | awk '{print $2}')
           if [ -z "$OPTIMIZED" ]; then
-            # Fallback: any .txt file with "while" in the name, or the largest
-            OPTIMIZED=$(ls -S "$HLO_DIR"/*.txt 2>/dev/null | head -1 || true)
+            # Fallback: largest .txt anywhere in dump
+            OPTIMIZED=$(find "$HLO_DIR" -name "*.txt" -exec wc -c {} + 2>/dev/null \
+              | grep -v ' total$' | sort -rn | head -1 | awk '{print $2}')
           fi
 
           if [ -z "$OPTIMIZED" ]; then
@@ -178,8 +180,13 @@ jobs:
             exit 0
           fi
 
-          echo "=== Analyzing: $(basename "$OPTIMIZED") ==="
+          echo "=== Analyzing: $OPTIMIZED ==="
           echo "File size: $(wc -c < "$OPTIMIZED") bytes"
+
+          # Also list all modules with while loops
+          echo ""
+          echo "=== All HLO modules containing 'while' ==="
+          find "$HLO_DIR" -name "*.after_optimizations.txt" -exec grep -l 'while' {} + 2>/dev/null | head -10 || echo "(none)"
 
           # Count host-forcing ops in while body
           echo ""
