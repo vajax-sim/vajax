@@ -106,10 +106,20 @@ jobs:
       - name: Install vajax with CUDA dependencies
         run: uv sync --extra cuda12
 
+      - name: Restore JAX compilation cache
+        uses: actions/cache@v4
+        with:
+          path: /tmp/jax-cache
+          key: jax-cache-${{ inputs.circuit }}-${{ inputs.sparse }}-${{ hashFiles('vajax/**/*.py') }}
+          restore-keys: |
+            jax-cache-${{ inputs.circuit }}-${{ inputs.sparse }}-
+            jax-cache-${{ inputs.circuit }}-
+
       - name: Run nsys profiling
         env:
           JAX_PLATFORMS: cuda,cpu
-          XLA_FLAGS: "--xla_gpu_autotune_level=0"
+          XLA_FLAGS: "--xla_gpu_autotune_level=0 --xla_dump_to=/tmp/hlo_dump --xla_dump_hlo_as_text=true"
+          JAX_COMPILATION_CACHE_DIR: /tmp/jax-cache
           XLA_PYTHON_CLIENT_PREALLOCATE: "false"
           XLA_PYTHON_CLIENT_ALLOCATOR: platform
           TF_CPP_MIN_LOG_LEVEL: "2"
@@ -142,6 +152,64 @@ jobs:
               ${{ inputs.circuit }} ${{ inputs.timesteps }} ${SPARSE_FLAG}
 
           echo "profile_name=${PROFILE_NAME}" >> "$GITHUB_ENV"
+
+      - name: Analyze HLO for host-forcing ops
+        if: always()
+        run: |
+          HLO_DIR="/tmp/hlo_dump"
+          if [ ! -d "$HLO_DIR" ]; then
+            echo "No HLO dump found at $HLO_DIR"
+            exit 0
+          fi
+
+          echo "=== HLO dump files ==="
+          ls -la "$HLO_DIR"/ | head -30
+
+          # Find the optimized HLO module (after all passes)
+          # XLA dumps multiple stages; we want the final one
+          OPTIMIZED=$(ls "$HLO_DIR"/*.after_optimizations.txt 2>/dev/null | tail -1 || true)
+          if [ -z "$OPTIMIZED" ]; then
+            # Fallback: any .txt file with "while" in the name, or the largest
+            OPTIMIZED=$(ls -S "$HLO_DIR"/*.txt 2>/dev/null | head -1 || true)
+          fi
+
+          if [ -z "$OPTIMIZED" ]; then
+            echo "No HLO text files found"
+            exit 0
+          fi
+
+          echo "=== Analyzing: $(basename "$OPTIMIZED") ==="
+          echo "File size: $(wc -c < "$OPTIMIZED") bytes"
+
+          # Count host-forcing ops in while body
+          echo ""
+          echo "=== Host-forcing ops in HLO ==="
+          echo "custom-call count: $(grep -c 'custom-call' "$OPTIMIZED" || echo 0)"
+          echo "send/recv count: $(grep -c -E '\b(send|recv)\b' "$OPTIMIZED" || echo 0)"
+          echo "infeed/outfeed count: $(grep -c -E '\b(infeed|outfeed)\b' "$OPTIMIZED" || echo 0)"
+          echo "all-reduce count: $(grep -c 'all-reduce' "$OPTIMIZED" || echo 0)"
+
+          # Extract while loop bodies and find host ops within them
+          echo ""
+          echo "=== custom-call targets (host callbacks) ==="
+          grep 'custom-call' "$OPTIMIZED" | sed 's/.*custom_call_target="\([^"]*\)".*/\1/' | sort | uniq -c | sort -rn | head -20
+
+          # Look for host callback patterns
+          echo ""
+          echo "=== Host callback / debug patterns ==="
+          grep -n -E '(host_callback|debug_callback|xla_python_cpu_callback|xla_python_gpu_callback|callback)' "$OPTIMIZED" | head -20 || echo "(none found)"
+
+          # Find while loop structure
+          echo ""
+          echo "=== While loop structure ==="
+          grep -n 'while' "$OPTIMIZED" | head -10 || echo "(no while loops found)"
+
+          # Save full analysis for artifact
+          {
+            echo "HLO file: $(basename "$OPTIMIZED")"
+            echo "---"
+            grep -n 'custom-call' "$OPTIMIZED" | head -50
+          } > /tmp/hlo_analysis.txt
 
       - name: Generate summary
         if: always()
@@ -200,6 +268,18 @@ jobs:
             echo ""
           } | tee -a "$GITHUB_STEP_SUMMARY"
 
+          # HLO host-callback analysis
+          if [ -f /tmp/hlo_analysis.txt ]; then
+            {
+              echo "### HLO Host-Forcing Ops"
+              echo ""
+              echo '```'
+              cat /tmp/hlo_analysis.txt
+              echo '```'
+              echo ""
+            } | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Upload nsys report
         if: always()
         uses: actions/upload-artifact@v4
@@ -208,3 +288,14 @@ jobs:
           path: /tmp/nsys-*.nsys-rep
           if-no-files-found: ignore
           retention-days: 30
+
+      - name: Upload HLO dump
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hlo-dump-${{ inputs.circuit }}-${{ github.sha }}
+          path: |
+            /tmp/hlo_dump/*.txt
+            /tmp/hlo_analysis.txt
+          if-no-files-found: ignore
+          retention-days: 7
