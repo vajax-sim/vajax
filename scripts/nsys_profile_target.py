@@ -76,6 +76,16 @@ def main():
         action="store_true",
         help="Use sparse solver (for large circuits)",
     )
+    parser.add_argument(
+        "--fori-loop",
+        action="store_true",
+        help="Use lax.fori_loop for NR solver (fixed iteration count, GPU-fusible)",
+    )
+    parser.add_argument(
+        "--fixed-step",
+        action="store_true",
+        help="Use fixed-step transient (no adaptive dt, outer fori_loop)",
+    )
     args = parser.parse_args()
 
     # Enable perf_counter timestamps in logs so we can correlate with nsys timeline
@@ -110,6 +120,14 @@ def main():
     print(f"Setting up circuit from {sim_path}...")
     engine = CircuitEngine(sim_path)
     engine.parse()
+
+    # Apply GPU fusion options before prepare()
+    if args.fori_loop:
+        engine.options.use_fori_loop = True
+        print("NR solver: fori_loop (fixed iteration count, GPU-fusible)")
+    if args.fixed_step:
+        engine.options.fixed_step_transient = True
+        print("Outer loop: fixed-step fori_loop (no adaptive dt)")
 
     print(f"Circuit size: {engine.num_nodes} nodes, {len(engine.devices)} devices")
     print()

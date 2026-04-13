@@ -21,6 +21,14 @@ on:
         description: 'Use sparse solver (for large circuits)'
         type: boolean
         default: false
+      fori_loop:
+        description: 'Use fori_loop NR solver (fixed iterations, GPU-fusible)'
+        type: boolean
+        default: false
+      fixed_step:
+        description: 'Use fixed-step transient (no adaptive dt, full GPU fusion)'
+        type: boolean
+        default: false
 
 # Only one profiling job at a time on the GPU runner
 concurrency:
@@ -130,9 +138,15 @@ jobs:
           # progress_interval to default to 0, which skips the cond entirely.
           VAJAX_NO_PROGRESS: "1"
         run: |
-          SPARSE_FLAG=""
+          EXTRA_FLAGS=""
           if [ "${{ inputs.sparse }}" = "true" ]; then
-            SPARSE_FLAG="--sparse"
+            EXTRA_FLAGS="$EXTRA_FLAGS --sparse"
+          fi
+          if [ "${{ inputs.fori_loop }}" = "true" ]; then
+            EXTRA_FLAGS="$EXTRA_FLAGS --fori-loop"
+          fi
+          if [ "${{ inputs.fixed_step }}" = "true" ]; then
+            EXTRA_FLAGS="$EXTRA_FLAGS --fixed-step"
           fi
 
           TIMESTAMP=$(date +%s)
@@ -142,6 +156,8 @@ jobs:
           echo "Circuit: ${{ inputs.circuit }}"
           echo "Timesteps: ${{ inputs.timesteps }}"
           echo "Sparse: ${{ inputs.sparse }}"
+          echo "fori_loop: ${{ inputs.fori_loop }}"
+          echo "fixed_step: ${{ inputs.fixed_step }}"
           echo "Commit: ${{ github.sha }}"
 
           nsys profile \
@@ -149,7 +165,7 @@ jobs:
             --osrt-threshold=0 \
             --output "/tmp/${PROFILE_NAME}" \
             uv run python scripts/nsys_profile_target.py \
-              ${{ inputs.circuit }} ${{ inputs.timesteps }} ${SPARSE_FLAG}
+              ${{ inputs.circuit }} ${{ inputs.timesteps }} ${EXTRA_FLAGS}
 
           echo "profile_name=${PROFILE_NAME}" >> "$GITHUB_ENV"
 
@@ -227,6 +243,8 @@ jobs:
             echo "**Circuit:** ${{ inputs.circuit }}"
             echo "**Timesteps:** ${{ inputs.timesteps }}"
             echo "**Sparse:** ${{ inputs.sparse }}"
+            echo "**fori_loop NR:** ${{ inputs.fori_loop }}"
+            echo "**fixed_step:** ${{ inputs.fixed_step }}"
             echo "**Commit:** \`${{ github.sha }}\`"
             echo ""
           } >> "$GITHUB_STEP_SUMMARY"
