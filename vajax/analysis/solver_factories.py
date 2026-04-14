@@ -881,16 +881,35 @@ def make_dense_full_mna_solver(
 
         linear_solve = _with_iterative_refinement(_dense_solve_low, _dense_matvec)
     else:
-        def linear_solve(J, f):
-            """Solve J @ delta = -f using dense direct solver."""
-            # Add Tikhonov regularization for numerical stability on GPU
-            reg = 1e-14 * jnp.eye(J.shape[0], dtype=J.dtype)
-            return jax.scipy.linalg.solve(J + reg, -f)
+        # Try GPU-fusible dense CUDA LU solver (avoids host-sync overhead from
+        # cusolver_getrf_ffi + cublas$triangularSolve inside while_loop).
+        # Falls back to jax.scipy.linalg.solve if not available or n > 64.
+        _use_dense_cuda = False
+        n_unknowns = n_nodes + n_vsources
+        try:
+            from vajax.dense_cuda import dense_cuda_jax
+
+            if dense_cuda_jax.is_available() and n_unknowns <= dense_cuda_jax.MAX_N:
+                _use_dense_cuda = True
+        except ImportError:
+            pass
+
+        if _use_dense_cuda:
+            def linear_solve(J, f):
+                """Solve J @ delta = -f using GPU-fusible shared-memory LU."""
+                return dense_cuda_jax.solve(J, f)
+        else:
+            def linear_solve(J, f):
+                """Solve J @ delta = -f using dense direct solver."""
+                # Add Tikhonov regularization for numerical stability on GPU
+                reg = 1e-14 * jnp.eye(J.shape[0], dtype=J.dtype)
+                return jax.scipy.linalg.solve(J + reg, -f)
 
     precision_str = "f32+refinement" if factorize_f32 else "f64"
+    solver_label = precision_str if factorize_f32 else ("dense-cuda" if _use_dense_cuda else "f64")
     logger.info(
         f"Creating dense full MNA solver: V({n_nodes}) + I({n_vsources}), "
-        f"NOI: {noi_indices is not None}, precision={precision_str}"
+        f"NOI: {noi_indices is not None}, precision={solver_label}"
     )
     return _make_nr_solver_common(
         build_system_jit=build_system_jit,

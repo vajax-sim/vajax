@@ -25,13 +25,14 @@ Issues = "https://github.com/ChipFlow/vajax/issues"
 Changelog = "https://github.com/ChipFlow/vajax/releases"
 
 [tool.uv.workspace]
-members = ["openvaf_jax/openvaf_py", "openvaf_jax/osdi_py", "vajax/sparse", "vajax/sprux", "va-builder"]
+members = ["openvaf_jax/openvaf_py", "openvaf_jax/osdi_py", "vajax/sparse", "vajax/sprux", "vajax/dense_cuda", "va-builder"]
 
 [tool.uv.sources]
 openvaf-py = { workspace = true }
 osdi-py = { workspace = true }
 umfpack-jax = { workspace = true }
 sprux-jax = { workspace = true }
+dense-cuda-jax = { workspace = true }
 va-builder = { workspace = true }
 
 [project.optional-dependencies]
@@ -41,6 +42,8 @@ cuda12 = [
     # Spineax: cuDSS sparse solver with cached symbolic factorization
     # Note: Only works on Linux with CUDA
     "spineax-vajax>=0.0.2",
+    # Dense CUDA LU solver: GPU-fusible shared-memory solve (avoids host-sync overhead)
+    "dense-cuda-jax",
 ]
 # UMFPACK solver for CPU sparse solving (requires libsuitesparse-dev + swig)
 # Falls back to klujax if not available

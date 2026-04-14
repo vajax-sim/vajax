@@ -18,6 +18,7 @@ resolution-markers = [
 
 [manifest]
 members = [
+    "dense-cuda-jax",
     "openvaf-py",
     "osdi-py",
     "sprux-jax",
@@ -395,6 +396,21 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/a9/95/a3dbbb5028f35eafb79008e7522a75244477d2838f38cbb722248dabc2a8/cycler-0.12.1.tar.gz", hash = "sha256:88bb128f02ba341da8ef447245a9e138fae777f6a23943da4540077d3601eb1c", size = 7615, upload-time = "2023-10-07T05:32:18.335Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e7/05/c19819d5e3d95294a6f5947fb9b9629efb316b96de511b418c53d245aae6/cycler-0.12.1-py3-none-any.whl", hash = "sha256:85cef7cff222d8644161529808465972e51340599459b8ac3ccbac5a854e0d30", size = 8321, upload-time = "2023-10-07T05:32:16.783Z" },
+]
+
+[[package]]
+name = "dense-cuda-jax"
+version = "0.1.0"
+source = { editable = "vajax/dense_cuda" }
+dependencies = [
+    { name = "jax" },
+    { name = "numpy" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "jax", specifier = ">=0.9.0,<0.10" },
+    { name = "numpy", specifier = ">=1.24.0" },
 ]
 
 [[package]]
@@ -2494,6 +2510,7 @@ dependencies = [
 
 [package.optional-dependencies]
 cuda12 = [
+    { name = "dense-cuda-jax" },
     { name = "jax-cuda12-plugin", marker = "sys_platform != 'darwin'" },
     { name = "spineax-vajax" },
 ]
@@ -2537,6 +2554,7 @@ dev = [
 requires-dist = [
     { name = "beartype", marker = "extra == 'dev'", specifier = ">=0.18.0" },
     { name = "beartype", marker = "extra == 'test'", specifier = ">=0.18.0" },
+    { name = "dense-cuda-jax", marker = "extra == 'cuda12'", editable = "vajax/dense_cuda" },
     { name = "jax", specifier = ">=0.9.0" },
     { name = "jax-cuda12-plugin", marker = "sys_platform != 'darwin' and extra == 'cuda12'", specifier = ">=0.9.0" },
     { name = "jaxlib", specifier = ">=0.9.0" },

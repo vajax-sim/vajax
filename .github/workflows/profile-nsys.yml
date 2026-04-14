@@ -114,6 +114,12 @@ jobs:
       - name: Install vajax with CUDA dependencies
         run: uv sync --extra cuda12
 
+      - name: Build dense-cuda FFI extension
+        working-directory: vajax/dense_cuda
+        run: |
+          uv pip install scikit-build-core nanobind
+          uv pip install --no-build-isolation .
+
       - name: Restore JAX compilation cache
         uses: actions/cache@v4
         with:

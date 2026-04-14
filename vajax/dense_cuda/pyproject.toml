@@ -1,0 +1,33 @@
+# Dense CUDA LU Solver - XLA FFI Extension
+# GPU-fusible dense linear solve (shared memory LU, kCmdBufferCompatible)
+# Build with: cd vajax/dense_cuda && pip install .
+
+[project]
+name = "dense-cuda-jax"
+version = "0.1.0"
+description = "GPU-fusible dense LU solver for JAX via XLA CUDA FFI"
+authors = [{name = "ChipFlow"}]
+requires-python = ">=3.11"
+dependencies = [
+    "jax>=0.9.0,<0.10",
+    "numpy>=1.24.0",
+]
+readme = "README.md"
+license = "Apache-2.0"
+
+[project.urls]
+Homepage = "https://github.com/ChipFlow/vajax"
+Repository = "https://github.com/ChipFlow/vajax/tree/main/vajax/dense_cuda"
+Issues = "https://github.com/ChipFlow/vajax/issues"
+
+[build-system]
+requires = [
+    "scikit-build-core>=0.8",
+    "nanobind>=1.8",
+    "jax>=0.9.0,<0.10",
+]
+build-backend = "scikit_build_core.build"
+
+[tool.scikit-build]
+cmake.build-type = "Release"
+build.verbose = true

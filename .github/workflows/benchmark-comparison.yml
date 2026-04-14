@@ -259,12 +259,24 @@ jobs:
           uv pip install scikit-build-core nanobind
           uv pip install --no-build-isolation .
 
+      - name: Build dense-cuda FFI extension
+        if: matrix.platform == 'cuda'
+        working-directory: vajax/dense_cuda
+        run: uv pip install --no-build-isolation .
+
       # ── Run VAJAX unit tests (CPU dense only) ────────────────────
       - name: Run VAJAX tests
         if: matrix.platform == 'cpu' && matrix.solver == 'dense'
         env:
           JAX_PLATFORMS: cpu
         run: uv run pytest tests/test_vacask_suite.py tests/test_vacask_jax.py -v --tb=short
+
+      # ── Run dense-cuda solver tests (GPU only) ──────────────────
+      - name: Run dense-cuda solver tests
+        if: matrix.platform == 'cuda' && matrix.solver == 'dense'
+        env:
+          JAX_PLATFORMS: cuda,cpu
+        run: uv run pytest tests/test_dense_cuda_solve.py -v --tb=short
 
       # ── Build VACASK (CPU only) ─────────────────────────────────
       - name: Cache Boost 1.88
