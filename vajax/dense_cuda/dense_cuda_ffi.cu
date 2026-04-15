@@ -152,14 +152,16 @@ __global__ void dense_lu_solve_kernel(
 // XLA FFI Handler
 //==============================================================================
 
+static constexpr char kAttrN[] = "n";
+
 static ffi::Error DenseLuSolveF64Impl(
-    ffi::PlatformStream<cudaStream_t> stream,
-    ffi::Attr<int32_t> n_attr,
+    cudaStream_t stream,
+    ffi::Attr<int32_t, kAttrN> n_attr,
     ffi::Buffer<ffi::DataType::F64> A,
     ffi::Buffer<ffi::DataType::F64> f,
     ffi::Result<ffi::Buffer<ffi::DataType::F64>> x
 ) {
-    int32_t n = n_attr.value();
+    int32_t n = *n_attr;
 
     if (n <= 0 || n > kMaxN) {
         return ffi::Error::InvalidArgument(
@@ -174,7 +176,7 @@ static ffi::Error DenseLuSolveF64Impl(
     size_t smem_bytes = (n * n + 2 * n) * sizeof(double) + n * sizeof(int);
 
     // Launch: 1 block, n threads
-    dense_lu_solve_kernel<<<1, n, smem_bytes, stream.value()>>>(
+    dense_lu_solve_kernel<<<1, n, smem_bytes, stream>>>(
         A_ptr, f_ptr, x_ptr, n
     );
 
@@ -191,7 +193,7 @@ XLA_FFI_DEFINE_HANDLER_SYMBOL(
     DenseLuSolveF64Impl,
     ffi::Ffi::Bind()
         .Ctx<ffi::PlatformStream<cudaStream_t>>()
-        .Attr<int32_t>("n")
+        .Attr<int32_t, kAttrN>()
         .Arg<ffi::Buffer<ffi::DataType::F64>>()   // A (n*n, row-major)
         .Arg<ffi::Buffer<ffi::DataType::F64>>()   // f (n,)
         .Ret<ffi::Buffer<ffi::DataType::F64>>(),   // x (n,)
