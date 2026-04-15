@@ -188,14 +188,17 @@ static ffi::Error DenseLuSolveF64Impl(
 
 // Register as kCmdBufferCompatible so XLA can capture this into command
 // buffers / CUDA graphs without host synchronization.
-XLA_FFI_DEFINE_HANDLER_SYMBOL(
-    dense_lu_solve_f64,
-    DenseLuSolveF64Impl,
-    ffi::Ffi::Bind()
+//
+// We expand XLA_FFI_DEFINE_HANDLER_SYMBOL manually because the
+// .Attr<int32_t, kAttrN>() template comma confuses the C preprocessor.
+extern "C" XLA_FFI_Error* dense_lu_solve_f64(XLA_FFI_CallFrame* call_frame) {
+    static auto* handler = ffi::Ffi::Bind()
         .Ctx<ffi::PlatformStream<cudaStream_t>>()
         .Attr<int32_t, kAttrN>()
         .Arg<ffi::Buffer<ffi::DataType::F64>>()   // A (n*n, row-major)
         .Arg<ffi::Buffer<ffi::DataType::F64>>()   // f (n,)
-        .Ret<ffi::Buffer<ffi::DataType::F64>>(),   // x (n,)
-    {ffi::Traits::kCmdBufferCompatible}
-);
+        .Ret<ffi::Buffer<ffi::DataType::F64>>()   // x (n,)
+        .To(DenseLuSolveF64Impl, {ffi::Traits::kCmdBufferCompatible})
+        .release();
+    return (*handler)(call_frame);
+}
