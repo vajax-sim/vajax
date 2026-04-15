@@ -33,12 +33,11 @@ extern "C" int launch_dense_lu_solve(
 
 static ffi::Error DenseLuSolveF64Impl(
     cudaStream_t stream,
-    ffi::Attr<int32_t> n_attr,
+    int32_t n,
     ffi::Buffer<ffi::DataType::F64> A,
     ffi::Buffer<ffi::DataType::F64> f,
     ffi::Result<ffi::Buffer<ffi::DataType::F64>> x
 ) {
-    int32_t n = *n_attr;
 
     int err = launch_dense_lu_solve(
         static_cast<void*>(stream), n,
