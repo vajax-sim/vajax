@@ -64,7 +64,7 @@ extern "C" XLA_FFI_Error* dense_lu_solve_f64(XLA_FFI_CallFrame* call_frame) {
         .Ret<ffi::Buffer<ffi::DataType::F64>>()   // x (n,)
         .To(DenseLuSolveF64Impl, {ffi::Traits::kCmdBufferCompatible})
         .release();
-    return (*handler)(call_frame);
+    return handler->Call(call_frame);
 }
 
 //==============================================================================
