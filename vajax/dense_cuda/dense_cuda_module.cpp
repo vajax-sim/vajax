@@ -31,11 +31,9 @@ extern "C" int launch_dense_lu_solve(
 // XLA FFI Handler
 //==============================================================================
 
-static constexpr char kAttrN[] = "n";
-
 static ffi::Error DenseLuSolveF64Impl(
     cudaStream_t stream,
-    ffi::Attr<int32_t, kAttrN> n_attr,
+    ffi::Attr<int32_t> n_attr,
     ffi::Buffer<ffi::DataType::F64> A,
     ffi::Buffer<ffi::DataType::F64> f,
     ffi::Result<ffi::Buffer<ffi::DataType::F64>> x
@@ -61,7 +59,7 @@ static ffi::Error DenseLuSolveF64Impl(
 extern "C" XLA_FFI_Error* dense_lu_solve_f64(XLA_FFI_CallFrame* call_frame) {
     static auto* handler = ffi::Ffi::Bind()
         .Ctx<ffi::PlatformStream<cudaStream_t>>()
-        .Attr<int32_t, kAttrN>()
+        .Attr<int32_t>("n")
         .Arg<ffi::Buffer<ffi::DataType::F64>>()   // A (n*n, row-major)
         .Arg<ffi::Buffer<ffi::DataType::F64>>()   // f (n,)
         .Ret<ffi::Buffer<ffi::DataType::F64>>()   // x (n,)
