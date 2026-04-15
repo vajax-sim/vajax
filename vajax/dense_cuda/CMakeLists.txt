@@ -32,9 +32,21 @@ if(NOT EXISTS "${JAXLIB_INCLUDE_DIR}/xla/ffi/api/ffi.h")
     message(FATAL_ERROR "XLA FFI headers not found at ${JAXLIB_INCLUDE_DIR}")
 endif()
 
-# Target GPU architectures: T4 (sm_75), A100 (sm_80), A10/3090 (sm_86), L4/4090 (sm_89)
+# Target GPU architectures:
+#   T4 (sm_75), A100 (sm_80), A10/3090 (sm_86), L4/4090 (sm_89), 5060/5090 (sm_120)
+# Falls back to PTX JIT for unlisted architectures via the highest arch.
 if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
-    set(CMAKE_CUDA_ARCHITECTURES "75;80;86;89")
+    # Check if nvcc supports sm_120 (requires CUDA 12.8+)
+    execute_process(
+        COMMAND ${CMAKE_CUDA_COMPILER} --list-gpu-arch
+        OUTPUT_VARIABLE _nvcc_archs
+        ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if(_nvcc_archs MATCHES "compute_120")
+        set(CMAKE_CUDA_ARCHITECTURES "75;80;86;89;120")
+    else()
+        set(CMAKE_CUDA_ARCHITECTURES "75;80;86;89")
+    endif()
 endif()
 
 # Build the Python extension module
