@@ -42,7 +42,10 @@ cuda12 = [
     # Spineax: cuDSS sparse solver with cached symbolic factorization
     # Note: Only works on Linux with CUDA
     "spineax-vajax>=0.0.2",
-    # Dense CUDA LU solver: GPU-fusible shared-memory solve (avoids host-sync overhead)
+]
+# Dense CUDA LU solver: GPU-fusible shared-memory solve (avoids host-sync overhead)
+# Requires separate build step: cd vajax/dense_cuda && uv pip install --no-build-isolation .
+dense-cuda = [
     "dense-cuda-jax",
 ]
 # UMFPACK solver for CPU sparse solving (requires libsuitesparse-dev + swig)
