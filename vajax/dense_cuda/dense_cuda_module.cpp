@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <string>
 
+// cuda_runtime_api.h for cudaStream_t, cudaError_t, cudaSuccess
 #include <cuda_runtime_api.h>
 #include <nanobind/nanobind.h>
 
@@ -21,8 +22,8 @@ namespace nb = nanobind;
 namespace ffi = xla::ffi;
 
 // CUDA kernel launcher defined in dense_cuda_ffi.cu
-extern "C" cudaError_t launch_dense_lu_solve(
-    cudaStream_t stream, int32_t n,
+extern "C" int launch_dense_lu_solve(
+    void* stream, int32_t n,
     const double* A, const double* f, double* x
 );
 
@@ -41,15 +42,15 @@ static ffi::Error DenseLuSolveF64Impl(
 ) {
     int32_t n = *n_attr;
 
-    cudaError_t err = launch_dense_lu_solve(
-        stream, n,
+    int err = launch_dense_lu_solve(
+        static_cast<void*>(stream), n,
         A.typed_data(), f.typed_data(), x->typed_data()
     );
 
-    if (err != cudaSuccess) {
+    if (err != 0) {
         return ffi::Error::Internal(
-            std::string("dense_lu_solve CUDA kernel launch failed: ") +
-            cudaGetErrorString(err) + " (n=" + std::to_string(n) + ")");
+            "dense_lu_solve CUDA kernel launch failed (error=" +
+            std::to_string(err) + ", n=" + std::to_string(n) + ")");
     }
 
     return ffi::Error::Success();

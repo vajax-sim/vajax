@@ -148,13 +148,14 @@ __global__ void dense_lu_solve_kernel(
 // Host-callable wrapper (called from the FFI handler in dense_cuda_module.cpp)
 //==============================================================================
 
-extern "C" cudaError_t launch_dense_lu_solve(
-    cudaStream_t stream, int32_t n,
+extern "C" int launch_dense_lu_solve(
+    void* stream_ptr, int32_t n,
     const double* A, const double* f, double* x
 ) {
-    if (n <= 0 || n > kMaxN) return cudaErrorInvalidValue;
+    if (n <= 0 || n > kMaxN) return static_cast<int>(cudaErrorInvalidValue);
 
+    auto stream = static_cast<cudaStream_t>(stream_ptr);
     size_t smem_bytes = (n * n + 2 * n) * sizeof(double) + n * sizeof(int);
     dense_lu_solve_kernel<<<1, n, smem_bytes, stream>>>(A, f, x, n);
-    return cudaGetLastError();
+    return static_cast<int>(cudaGetLastError());
 }

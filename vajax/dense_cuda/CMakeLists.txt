@@ -69,7 +69,7 @@ target_include_directories(dense_cuda_jax_cpp PRIVATE
     ${JAXLIB_INCLUDE_DIR}
     ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
 )
-target_link_libraries(dense_cuda_jax_cpp PRIVATE dense_cuda_kernels CUDA::cudart)
+target_link_libraries(dense_cuda_jax_cpp PRIVATE dense_cuda_kernels)
 
 # Install target
 install(TARGETS dense_cuda_jax_cpp LIBRARY DESTINATION .)
