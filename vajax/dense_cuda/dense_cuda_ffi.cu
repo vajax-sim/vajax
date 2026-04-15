@@ -13,10 +13,6 @@
 #include <cstdint>
 #include <cuda_runtime.h>
 
-#include "xla/ffi/api/ffi.h"
-
-namespace ffi = xla::ffi;
-
 // Maximum matrix dimension. 64x64 uses ~34KB shared memory.
 static constexpr int kMaxN = 64;
 
@@ -149,56 +145,16 @@ __global__ void dense_lu_solve_kernel(
 }
 
 //==============================================================================
-// XLA FFI Handler
+// Host-callable wrapper (called from the FFI handler in dense_cuda_module.cpp)
 //==============================================================================
 
-static constexpr char kAttrN[] = "n";
-
-static ffi::Error DenseLuSolveF64Impl(
-    cudaStream_t stream,
-    ffi::Attr<int32_t, kAttrN> n_attr,
-    ffi::Buffer<ffi::DataType::F64> A,
-    ffi::Buffer<ffi::DataType::F64> f,
-    ffi::Result<ffi::Buffer<ffi::DataType::F64>> x
+extern "C" cudaError_t launch_dense_lu_solve(
+    cudaStream_t stream, int32_t n,
+    const double* A, const double* f, double* x
 ) {
-    int32_t n = *n_attr;
+    if (n <= 0 || n > kMaxN) return cudaErrorInvalidValue;
 
-    if (n <= 0 || n > kMaxN) {
-        return ffi::Error::InvalidArgument(
-            "dense_lu_solve: n must be in [1, 64], got " + std::to_string(n));
-    }
-
-    const double* A_ptr = A.typed_data();
-    const double* f_ptr = f.typed_data();
-    double* x_ptr = x->typed_data();
-
-    // Shared memory: A[n*n] + b[n] + x[n] (all double) + piv[n] (int)
     size_t smem_bytes = (n * n + 2 * n) * sizeof(double) + n * sizeof(int);
-
-    // Launch: 1 block, n threads
-    dense_lu_solve_kernel<<<1, n, smem_bytes, stream>>>(
-        A_ptr, f_ptr, x_ptr, n
-    );
-
-    // No cudaStreamSynchronize — the kernel runs on XLA's stream and
-    // completes before any dependent thunk executes.
-
-    return ffi::Error::Success();
-}
-
-// Register as kCmdBufferCompatible so XLA can capture this into command
-// buffers / CUDA graphs without host synchronization.
-//
-// We expand XLA_FFI_DEFINE_HANDLER_SYMBOL manually because the
-// .Attr<int32_t, kAttrN>() template comma confuses the C preprocessor.
-extern "C" XLA_FFI_Error* dense_lu_solve_f64(XLA_FFI_CallFrame* call_frame) {
-    static auto* handler = ffi::Ffi::Bind()
-        .Ctx<ffi::PlatformStream<cudaStream_t>>()
-        .Attr<int32_t, kAttrN>()
-        .Arg<ffi::Buffer<ffi::DataType::F64>>()   // A (n*n, row-major)
-        .Arg<ffi::Buffer<ffi::DataType::F64>>()   // f (n,)
-        .Ret<ffi::Buffer<ffi::DataType::F64>>()   // x (n,)
-        .To(DenseLuSolveF64Impl, {ffi::Traits::kCmdBufferCompatible})
-        .release();
-    return (*handler)(call_frame);
+    dense_lu_solve_kernel<<<1, n, smem_bytes, stream>>>(A, f, x, n);
+    return cudaGetLastError();
 }

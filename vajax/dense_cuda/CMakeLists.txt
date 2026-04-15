@@ -59,13 +59,17 @@ set_target_properties(dense_cuda_kernels PROPERTIES
     POSITION_INDEPENDENT_CODE ON
 )
 
-# The nanobind Python module (C++ wrapper that exposes capsules)
+# The nanobind Python module (C++ wrapper with FFI handler + capsule export)
+# Needs CUDA include dirs for cudaStream_t used in FFI PlatformStream binding.
 nanobind_add_module(dense_cuda_jax_cpp STABLE_ABI
     dense_cuda_module.cpp
 )
 
-target_include_directories(dense_cuda_jax_cpp PRIVATE ${JAXLIB_INCLUDE_DIR})
-target_link_libraries(dense_cuda_jax_cpp PRIVATE dense_cuda_kernels)
+target_include_directories(dense_cuda_jax_cpp PRIVATE
+    ${JAXLIB_INCLUDE_DIR}
+    ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
+)
+target_link_libraries(dense_cuda_jax_cpp PRIVATE dense_cuda_kernels CUDA::cudart)
 
 # Install target
 install(TARGETS dense_cuda_jax_cpp LIBRARY DESTINATION .)
