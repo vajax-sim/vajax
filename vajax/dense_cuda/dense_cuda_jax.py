@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import jax
 import jax.extend.core
+import numpy as np
 from jax.core import ShapedArray
 from jax.interpreters import mlir
 from jaxtyping import Array
@@ -94,7 +95,7 @@ def _dense_lu_solve_f64_impl(A_flat: Array, neg_f: Array, *, n: int) -> Array:
         "dense_lu_solve_f64",
         jax.ShapeDtypeStruct((n,), neg_f.dtype),
     )
-    return call(A_flat, neg_f, n=n)
+    return call(A_flat, neg_f, n=np.int32(n))
 
 
 # =============================================================================
