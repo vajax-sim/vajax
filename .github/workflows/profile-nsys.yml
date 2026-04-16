@@ -29,6 +29,18 @@ on:
         description: 'Use fixed-step transient (no adaptive dt, full GPU fusion)'
         type: boolean
         default: false
+      cmdbuf_mode:
+        description: 'Command buffer mode (which ops to capture into cmdbufs)'
+        type: choice
+        options:
+          - default     # XLA defaults (FUSION,CUSTOM_CALL,CUBLAS,...)
+          - max         # +CONDITIONALS,WHILE (maximum fusion)
+          - off         # Disable command buffers entirely (baseline)
+        default: default
+      verbose_xla:
+        description: 'Enable verbose XLA logging (command buffer, thunk)'
+        type: boolean
+        default: false
 
 # Only one profiling job at a time on the GPU runner
 concurrency:
@@ -132,7 +144,6 @@ jobs:
       - name: Run nsys profiling
         env:
           JAX_PLATFORMS: cuda,cpu
-          XLA_FLAGS: "--xla_gpu_autotune_level=0 --xla_dump_to=/tmp/hlo_dump --xla_dump_hlo_as_text=true"
           JAX_COMPILATION_CACHE_DIR: /tmp/jax-cache
           XLA_PYTHON_CLIENT_PREALLOCATE: "false"
           XLA_PYTHON_CLIENT_ALLOCATOR: platform
@@ -155,8 +166,31 @@ jobs:
             EXTRA_FLAGS="$EXTRA_FLAGS --fixed-step"
           fi
 
+          # Build XLA_FLAGS based on cmdbuf_mode input.
+          BASE_XLA_FLAGS="--xla_gpu_autotune_level=0 --xla_dump_to=/tmp/hlo_dump --xla_dump_hlo_as_text=true"
+          case "${{ inputs.cmdbuf_mode }}" in
+            max)
+              # Include CONDITIONALS + WHILE for maximum command buffer capture.
+              CMDBUF_FLAGS="--xla_gpu_enable_command_buffer=FUSION,CUSTOM_CALL,CUBLAS,CUBLASLT,COLLECTIVES,DYNAMIC_SLICE,CONDITIONALS,WHILE --xla_gpu_graph_min_graph_size=1"
+              ;;
+            off)
+              # Disable command buffers entirely for baseline comparison.
+              CMDBUF_FLAGS="--xla_gpu_enable_command_buffer="
+              ;;
+            *)
+              CMDBUF_FLAGS=""
+              ;;
+          esac
+          export XLA_FLAGS="${BASE_XLA_FLAGS} ${CMDBUF_FLAGS}"
+          echo "XLA_FLAGS=${XLA_FLAGS}"
+
+          if [ "${{ inputs.verbose_xla }}" = "true" ]; then
+            export TF_CPP_MIN_LOG_LEVEL=0
+            export TF_CPP_VMODULE="command_buffer_thunk=2,command_buffer_cmd=2,gpu_command_buffer=2"
+          fi
+
           TIMESTAMP=$(date +%s)
-          PROFILE_NAME="nsys-${{ inputs.circuit }}-${TIMESTAMP}"
+          PROFILE_NAME="nsys-${{ inputs.circuit }}-${{ inputs.cmdbuf_mode }}-${TIMESTAMP}"
 
           echo "=== Starting nsys GPU Profiling ==="
           echo "Circuit: ${{ inputs.circuit }}"
@@ -164,10 +198,13 @@ jobs:
           echo "Sparse: ${{ inputs.sparse }}"
           echo "fori_loop: ${{ inputs.fori_loop }}"
           echo "fixed_step: ${{ inputs.fixed_step }}"
+          echo "cmdbuf_mode: ${{ inputs.cmdbuf_mode }}"
+          echo "verbose_xla: ${{ inputs.verbose_xla }}"
           echo "Commit: ${{ github.sha }}"
 
           nsys profile \
             --trace=cuda,nvtx,osrt \
+            --cuda-graph-trace=node \
             --osrt-threshold=0 \
             --output "/tmp/${PROFILE_NAME}" \
             uv run python scripts/nsys_profile_target.py \
