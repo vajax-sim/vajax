@@ -146,7 +146,13 @@ jobs:
           JAX_PLATFORMS: cuda,cpu
           JAX_COMPILATION_CACHE_DIR: /tmp/jax-cache
           XLA_PYTHON_CLIENT_PREALLOCATE: "false"
-          XLA_PYTHON_CLIENT_ALLOCATOR: platform
+          # NOTE: do NOT set XLA_PYTHON_CLIENT_ALLOCATOR=platform — that forces
+          # per-call allocations, which invalidate cached CUDA graphs inside
+          # kCommandBuffer thunks (graph node buffer pointers change every NR
+          # iteration, requiring cudaGraphExecUpdate each launch and defeating
+          # the whole point of command buffer capture). The default BFC
+          # allocator keeps buffer pointers stable across iterations so the
+          # CUDA graph can be re-launched without updates.
           TF_CPP_MIN_LOG_LEVEL: "2"
           # Disable in-loop progress reporting. The default progress_interval=100
           # wraps a jax.debug.callback in a lax.cond inside the compiled while
