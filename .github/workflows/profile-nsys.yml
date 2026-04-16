@@ -170,11 +170,15 @@ jobs:
           BASE_XLA_FLAGS="--xla_gpu_autotune_level=0 --xla_dump_to=/tmp/hlo_dump --xla_dump_hlo_as_text=true"
           case "${{ inputs.cmdbuf_mode }}" in
             max)
-              # Include CONDITIONALS + WHILE for maximum command buffer capture.
-              # Valid values in this XLA version: FUSION,CUSTOM_CALL,CUBLAS,CUBLASLT,
-              # COLLECTIVES,CUDNN,CONDITIONALS,WHILE. (DYNAMIC_SLICE and DYNAMIC_SLICE_FUSION
-              # are NOT valid — they caused flag parsing to fail.)
-              CMDBUF_FLAGS="--xla_gpu_enable_command_buffer=FUSION,CUSTOM_CALL,CUBLAS,CUBLASLT,COLLECTIVES,CONDITIONALS,WHILE"
+              # Extend the default cmd buffer set with CONDITIONAL + WHILE so the
+              # NR while / step-accept cond thunks are captured too.
+              # Valid enum values (XLA late-2025): FUSION, CUBLAS, CUDNN, COLLECTIVES,
+              # CONDITIONAL (singular!), WHILE, CUSTOM_CALL, CUBLASLT,
+              # DYNAMIC_SLICE_FUSION, DYNAMIC_SLICE_COPY_FUSION. CONDITIONALS and
+              # DYNAMIC_SLICE (no _FUSION) are NOT valid.
+              # The +NAME prefix adds to the default set; equivalent to listing
+              # FUSION,CUBLAS,CUBLASLT,CUDNN,CUSTOM_CALL,DYNAMIC_SLICE_FUSION,CONDITIONAL,WHILE.
+              CMDBUF_FLAGS="--xla_gpu_enable_command_buffer=+CONDITIONAL,+WHILE"
               ;;
             off)
               # Disable command buffers entirely for baseline comparison.
