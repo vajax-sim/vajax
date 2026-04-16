@@ -171,7 +171,10 @@ jobs:
           case "${{ inputs.cmdbuf_mode }}" in
             max)
               # Include CONDITIONALS + WHILE for maximum command buffer capture.
-              CMDBUF_FLAGS="--xla_gpu_enable_command_buffer=FUSION,CUSTOM_CALL,CUBLAS,CUBLASLT,COLLECTIVES,DYNAMIC_SLICE,CONDITIONALS,WHILE --xla_gpu_graph_min_graph_size=1"
+              # Valid values in this XLA version: FUSION,CUSTOM_CALL,CUBLAS,CUBLASLT,
+              # COLLECTIVES,CUDNN,CONDITIONALS,WHILE. (DYNAMIC_SLICE and DYNAMIC_SLICE_FUSION
+              # are NOT valid — they caused flag parsing to fail.)
+              CMDBUF_FLAGS="--xla_gpu_enable_command_buffer=FUSION,CUSTOM_CALL,CUBLAS,CUBLASLT,COLLECTIVES,CONDITIONALS,WHILE"
               ;;
             off)
               # Disable command buffers entirely for baseline comparison.
