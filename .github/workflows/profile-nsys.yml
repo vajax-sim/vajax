@@ -96,13 +96,17 @@ jobs:
             || sudo apt-get install -y nsight-systems-2025.3 \
             || echo "WARNING: Could not install nsys 2025.3, using bundled version"
 
-          # Add to PATH (find wherever it installed)
-          NSYS_BIN=$(find /opt/nvidia/nsight-systems/2025.3* -name nsys -type f 2>/dev/null | head -1)
+          # Add to PATH — apt package may install under nsight-systems/ or nsight-systems-cli/
+          NSYS_BIN=$(find /opt/nvidia/nsight-systems*/2025.3* -name nsys -type f 2>/dev/null | head -1)
+          if [ -z "$NSYS_BIN" ]; then
+            # Fallback: ask dpkg where the binary went
+            NSYS_BIN=$(dpkg -L nsight-systems-cli-2025.3.1 2>/dev/null | grep 'bin/nsys$' | head -1)
+          fi
           if [ -n "$NSYS_BIN" ]; then
             dirname "$NSYS_BIN" >> $GITHUB_PATH
             "$NSYS_BIN" --version
           else
-            echo "nsys 2025.3 not found in /opt/nvidia, checking PATH..."
+            echo "WARNING: nsys 2025.3 binary not found, using whatever is in PATH"
             nsys --version
           fi
 
