@@ -78,6 +78,34 @@ jobs:
           echo "=== nsys Version ==="
           nsys --version 2>/dev/null || echo "nsys not in PATH"
 
+      - name: Install Nsight Systems 2025.3
+        run: |
+          # 2024.6.2 (bundled) can't trace CUDA on Blackwell (CC 12.0).
+          # 2025.3 supports both Blackwell and Turing.
+          printf "Current nsys: %s\n" "$(nsys --version 2>/dev/null || echo 'none')"
+
+          # NVIDIA devtools apt repo for Ubuntu 24.04
+          wget -qO- https://developer.download.nvidia.com/devtools/repos/ubuntu2404/amd64/nvidia.pub \
+            | sudo tee /etc/apt/trusted.gpg.d/nvidia-devtools.asc > /dev/null
+          echo "deb https://developer.download.nvidia.com/devtools/repos/ubuntu2404/amd64/ /" \
+            | sudo tee /etc/apt/sources.list.d/nvidia-devtools.list
+          sudo apt-get update
+
+          # Install latest 2025.3.x CLI package
+          sudo apt-get install -y nsight-systems-cli-2025.3 \
+            || sudo apt-get install -y nsight-systems-2025.3 \
+            || echo "WARNING: Could not install nsys 2025.3, using bundled version"
+
+          # Add to PATH (find wherever it installed)
+          NSYS_BIN=$(find /opt/nvidia/nsight-systems/2025.3* -name nsys -type f 2>/dev/null | head -1)
+          if [ -n "$NSYS_BIN" ]; then
+            dirname "$NSYS_BIN" >> $GITHUB_PATH
+            "$NSYS_BIN" --version
+          else
+            echo "nsys 2025.3 not found in /opt/nvidia, checking PATH..."
+            nsys --version
+          fi
+
       - name: Install LLVM 18
         run: |
           if ! llvm-config-18 --version 2>/dev/null; then
