@@ -86,6 +86,11 @@ def main():
         action="store_true",
         help="Use fixed-step transient (no adaptive dt, outer fori_loop)",
     )
+    parser.add_argument(
+        "--flattened-loop",
+        action="store_true",
+        help="Use flattened single while_loop (timestep+NR in one loop, no nested kWhile)",
+    )
     args = parser.parse_args()
 
     # Enable perf_counter timestamps in logs so we can correlate with nsys timeline
@@ -125,9 +130,12 @@ def main():
     if args.fori_loop:
         engine.options.use_fori_loop = True
         print("NR solver: fori_loop (fixed iteration count, GPU-fusible)")
-    if args.fixed_step:
+    if args.fixed_step or args.flattened_loop:
         engine.options.fixed_step_transient = True
-        print("Outer loop: fixed-step fori_loop (no adaptive dt)")
+        print("Outer loop: fixed-step (no adaptive dt)")
+    if args.flattened_loop:
+        engine.options.flattened_loop = True
+        print("Loop structure: flattened single while_loop (no nested NR)")
 
     print(f"Circuit size: {engine.num_nodes} nodes, {len(engine.devices)} devices")
     print()

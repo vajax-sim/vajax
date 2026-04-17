@@ -1115,6 +1115,34 @@ class FullMNAStrategy(TransientStrategy):
                 pass
 
         if use_fixed_step:
+            # Check for flattened loop mode (single while, no nested NR)
+            import os
+
+            use_flattened = self.runner.options.flattened_loop or os.environ.get(
+                "VAJAX_FLATTENED_LOOP", ""
+            ) == "1"
+            if use_flattened and hasattr(nr_solve, "build_system_jit"):
+                return self._run_flattened_step(
+                    nr_solve=nr_solve,
+                    jit_source_eval=jit_source_eval,
+                    device_arrays=device_arrays,
+                    config=config,
+                    init_state=init_state,
+                    n_total=n_total,
+                    n_unknowns=n_unknowns,
+                    n_external=n_external,
+                    n_vsources=n_vsources,
+                    max_steps=max_steps,
+                    t_stop=t_stop,
+                    dt=dt,
+                    dtype=dtype,
+                )
+            elif use_flattened:
+                logger.warning(
+                    "flattened_loop requested but nr_solve lacks exposed components "
+                    "(only dense solver supports this). Falling back to fori_loop."
+                )
+
             return self._run_fixed_step(
                 nr_solve=nr_solve,
                 jit_source_eval=jit_source_eval,
@@ -1470,6 +1498,432 @@ class FullMNAStrategy(TransientStrategy):
 
         logger.info(
             f"{self.name}: Fixed-step completed {n_steps} steps in {wall_time:.3f}s "
+            f"({stats['time_per_step_ms']:.2f}ms/step, "
+            f"total NR iters={int(total_nr_final)})"
+        )
+
+        return times_final, V_out_final, stats
+
+    def _run_flattened_step(
+        self,
+        nr_solve: Callable,
+        jit_source_eval: Callable,
+        device_arrays: Any,
+        config,  # AdaptiveConfig
+        init_state,  # FullMNAState (for initial X, Q_prev, etc.)
+        n_total: int,
+        n_unknowns: int,
+        n_external: int,
+        n_vsources: int,
+        max_steps: int,
+        t_stop: float,
+        dt: float,
+        dtype: Any,
+    ) -> Tuple[jax.Array, jax.Array, Dict]:
+        """Run fixed-step transient using a single flattened lax.while_loop.
+
+        Instead of nesting a while_loop (NR) inside a fori_loop (timesteps),
+        this flattens both into a single while_loop with jnp.where state-machine
+        logic. Each iteration of the loop performs exactly one NR iteration.
+        When NR converges, the step is accepted and the NR counter resets — all
+        via jnp.where (no lax.cond, no nested while).
+
+        This produces a single kWhile thunk with a single kCommandBuffer body
+        in the XLA thunk tree, eliminating the per-NR-iteration host sync from
+        nested kWhile and the kConditional from iter_zero_converged recompute.
+
+        The Q recompute problem is solved naturally: after step acceptance,
+        nr_iter resets to 0 and the next build_system call computes Q at
+        X_final (the converged solution), giving correct Q_prev for the
+        subsequent step's charge integration.
+        """
+        n_steps = min(int(t_stop / dt), max_steps - 1)
+        if n_steps < 1:
+            n_steps = 1
+
+        logger.info(
+            f"{self.name}: Flattened single-while mode: {n_steps} steps, dt={dt:.2e}s "
+            f"(single lax.while_loop, no nested NR loop)"
+        )
+
+        # Extract solver components attached by make_dense_full_mna_solver
+        build_system_jit = nr_solve.build_system_jit
+        linear_solve_fn = nr_solve.linear_solve_fn
+        enforce_noi_fn = nr_solve.enforce_noi_fn
+        noi_indices = nr_solve.noi_indices
+        residual_mask = nr_solve.residual_mask
+        residual_conv_mask = nr_solve.residual_conv_mask
+        nr_cfg = nr_solve.nr_config
+        total_limit_states = nr_solve.total_limit_states
+
+        nr_damping = nr_cfg["nr_damping"]
+        vntol = nr_cfg["vntol"]
+        reltol = nr_cfg["reltol"]
+        abstol = nr_cfg["abstol"]
+        max_step_v = nr_cfg["max_step"]
+        max_nr_iters = nr_cfg["max_nr_iters"]
+
+        # Per-unknown absolute tolerance for delta convergence
+        delta_abs_tol = jnp.concatenate(
+            [
+                jnp.full(n_unknowns, vntol, dtype=dtype),
+                jnp.full(n_vsources, abstol, dtype=dtype),
+            ]
+        )
+
+        # Extract initial conditions
+        X0 = init_state.X
+        Q_prev_init = init_state.Q_prev
+
+        # Integration coefficients (fixed for all steps)
+        from vajax.analysis.integration import IntegrationMethod
+
+        inv_dt = 1.0 / dt
+        c0 = inv_dt
+        c1 = -inv_dt
+        d1 = 0.0
+        c2 = 0.0
+
+        integ_method = config.integration_method
+        if integ_method == IntegrationMethod.TRAPEZOIDAL:
+            c0 = 2.0 * inv_dt
+            c1 = -2.0 * inv_dt
+            d1 = -1.0
+        elif integ_method == IntegrationMethod.GEAR2:
+            c0 = 1.5 * inv_dt
+            c1 = -2.0 * inv_dt
+            c2 = 0.5 * inv_dt
+
+        # Pre-allocate output arrays
+        total_out = n_steps + 1
+        times_out = jnp.zeros(total_out, dtype=dtype)
+        V_out = jnp.zeros((total_out, n_external), dtype=dtype)
+        I_out = jnp.zeros((total_out, max(n_vsources, 1)), dtype=dtype)
+
+        # Set initial conditions at index 0
+        times_out = times_out.at[0].set(0.0)
+        V_out = V_out.at[0].set(X0[:n_external])
+
+        # Static tolerance floor
+        nr_abstol = config.abstol
+        res_tol_floor = jnp.full(n_unknowns, nr_abstol, dtype=dtype)
+
+        # Static integration coefficient arrays
+        integ_c0 = jnp.asarray(c0, dtype=dtype)
+        integ_c1 = jnp.asarray(c1, dtype=dtype)
+        integ_d1 = jnp.asarray(d1, dtype=dtype)
+        integ_c2 = jnp.asarray(c2, dtype=dtype)
+        gmin = jnp.asarray(1e-12, dtype=dtype)
+        gshunt = jnp.asarray(0.0, dtype=dtype)
+
+        limit_state_init = (
+            jnp.zeros(total_limit_states, dtype=dtype)
+            if total_limit_states > 0
+            else jnp.zeros(0, dtype=dtype)
+        )
+
+        # Flattened state: combines timestep + NR state into one tuple.
+        # All branching is via jnp.where — no lax.cond, no nested while.
+        #
+        # Q_at_X stores Q evaluated at the current X (post-delta), computed
+        # by a recompute call at the end of each tick. On step acceptance,
+        # Q_at_X becomes Q_prev for the next step — this avoids the Q lag
+        # bug where state.Q (from build_system at X_before_delta) would be
+        # one delta behind.
+        init_loop_state = (
+            X0,                                              # 0: X
+            Q_prev_init,                                     # 1: Q_at_X (Q evaluated at X)
+            Q_prev_init,                                     # 2: Q_prev (accepted step's Q)
+            jnp.zeros(n_unknowns, dtype=dtype),              # 3: dQdt_prev
+            jnp.zeros(n_unknowns, dtype=dtype),              # 4: Q_prev2
+            jnp.array(0, dtype=jnp.int32),                   # 5: step
+            jnp.array(0, dtype=jnp.int32),                   # 6: nr_iter
+            jnp.array(False),                                # 7: nr_converged
+            times_out,                                       # 8: times_out
+            V_out,                                           # 9: V_out
+            I_out,                                           # 10: I_out
+            jnp.array(0, dtype=jnp.int32),                   # 11: total_nr_iters
+            limit_state_init,                                # 12: limit_state
+            jnp.zeros(max(n_vsources, 1), dtype=dtype),      # 13: I_vsource
+            jnp.zeros(n_unknowns, dtype=dtype),              # 14: max_res_contrib
+        )
+
+        def cond_fn(state):
+            step = state[5]
+            return step < n_steps
+
+        def body_fn(state):
+            (
+                X, Q_at_X, Q_prev, dQdt_prev, Q_prev2,
+                step, nr_iter, nr_converged,
+                t_out, v_out, i_out,
+                total_nr, limit_state,
+                I_vsource_prev, max_res_contrib_prev,
+            ) = state
+
+            # ── Phase 1: Step acceptance (when NR converged) ──
+            # nr_iter > 0 avoids triggering on the very first iteration.
+            # Q_at_X is Q evaluated at the current X (post-delta from last
+            # tick), so it's Q(X_final) — the correct Q for the accepted step.
+            step_done = nr_converged & (nr_iter > 0)
+
+            new_step = jnp.where(step_done, step + 1, step)
+            new_nr_iter = jnp.where(step_done, jnp.int32(0), nr_iter)
+            new_Q_prev = jnp.where(step_done, Q_at_X, Q_prev)
+            new_Q_prev2 = jnp.where(step_done, Q_prev, Q_prev2)
+
+            # dQdt for the accepted step (uses Q_at_X = Q(X_final))
+            accepted_dQdt = (
+                integ_c0 * Q_at_X + integ_c1 * Q_prev
+                + integ_d1 * dQdt_prev + integ_c2 * Q_prev2
+            )
+            new_dQdt_prev = jnp.where(step_done, accepted_dQdt, dQdt_prev)
+
+            new_total_nr = jnp.where(step_done, total_nr + nr_iter, total_nr)
+
+            # Store output on step acceptance
+            out_idx = new_step  # 1-based: step 0 at init, step 1 at idx 1
+            t_val = (
+                jnp.float64(new_step) * dt
+                if dtype == jnp.float64
+                else jnp.float32(new_step) * dt
+            )
+            new_t_out = jnp.where(
+                step_done,
+                t_out.at[out_idx].set(t_val),
+                t_out,
+            )
+            new_v_out = jnp.where(
+                step_done,
+                v_out.at[out_idx].set(X[:n_external]),
+                v_out,
+            )
+            if n_vsources > 0:
+                new_i_out = jnp.where(
+                    step_done,
+                    i_out.at[out_idx].set(I_vsource_prev[:n_vsources]),
+                    i_out,
+                )
+            else:
+                new_i_out = i_out
+
+            # Limit state doesn't change on acceptance (already updated per NR iter)
+            new_limit_state = limit_state
+
+            # ── Phase 2: One NR iteration (always executes) ──
+            # Evaluate sources at the current step's time
+            t_next = (
+                jnp.float64(new_step) + 1.0
+            ) * dt if dtype == jnp.float64 else (
+                jnp.float32(new_step) + 1.0
+            ) * dt
+            vsource_vals, isource_vals = jit_source_eval(t_next)
+
+            # Build system: J, f, Q, I_vsource, limit_state, max_res_contrib
+            J_or_data, f, Q_iter, I_vsource_new, limit_state_new, max_res_contrib_new = (
+                build_system_jit(
+                    X,
+                    vsource_vals,
+                    isource_vals,
+                    new_Q_prev,
+                    integ_c0,
+                    device_arrays,
+                    gmin,
+                    gshunt,
+                    integ_c1,
+                    integ_d1,
+                    new_dQdt_prev,
+                    integ_c2,
+                    new_Q_prev2,
+                    new_limit_state,
+                    new_nr_iter,
+                )
+            )
+
+            # Residual convergence check (VACASK-style)
+            res_tol_nodes = jnp.maximum(max_res_contrib_new * reltol, res_tol_floor)
+            res_tol = jnp.concatenate(
+                [res_tol_nodes, jnp.full(n_vsources, vntol, dtype=dtype)]
+            )
+            if residual_conv_mask is not None:
+                f_check = jnp.where(residual_conv_mask, f, 0.0)
+            else:
+                f_check = f
+            residual_converged = jnp.all(jnp.abs(f_check) < res_tol)
+
+            # Enforce NOI constraints and solve
+            J_or_data, f_solve = enforce_noi_fn(J_or_data, f)
+            delta = linear_solve_fn(J_or_data, f_solve)
+
+            # Delta convergence check (VACASK-style)
+            conv_delta = jnp.concatenate(
+                [delta[:n_unknowns] * nr_damping, delta[n_unknowns:]]
+            )
+            X_ref = jnp.concatenate([X[1:n_total], X[n_total:]])
+            tol = jnp.maximum(jnp.abs(X_ref) * reltol, delta_abs_tol)
+            if residual_mask is not None:
+                conv_delta = jnp.where(residual_mask, conv_delta, 0.0)
+            # VACASK skips delta check at iteration 0
+            delta_converged = (new_nr_iter == 0) | jnp.all(jnp.abs(conv_delta) < tol)
+
+            # Voltage step limiting
+            V_delta = delta[:n_unknowns]
+            max_V_delta = jnp.max(jnp.abs(V_delta))
+            V_scale = jnp.minimum(1.0, max_step_v / jnp.maximum(max_V_delta, 1e-30))
+            V_damped = V_delta * V_scale * nr_damping
+            X_new = X.at[1:n_total].add(V_damped)
+            X_new = X_new.at[n_total:].add(delta[n_unknowns:])
+
+            # Clamp NOI nodes to 0V
+            if noi_indices is not None and len(noi_indices) > 0:
+                X_new = X_new.at[noi_indices].set(0.0)
+
+            # Combined convergence (VACASK AND)
+            this_converged = residual_converged & delta_converged
+
+            # VACASK preventedConvergence (limit state settling)
+            if total_limit_states > 0:
+                limit_delta = jnp.max(jnp.abs(limit_state_new - new_limit_state))
+                limit_ref = jnp.maximum(
+                    jnp.max(jnp.abs(new_limit_state)) * reltol, vntol
+                )
+                limit_settled = limit_delta < limit_ref
+                this_converged = this_converged & limit_settled & (new_nr_iter >= 1)
+
+            # Cap NR iterations: if we hit max_nr_iters, force step acceptance
+            hit_max_nr = (new_nr_iter + 1) >= max_nr_iters
+            this_converged = this_converged | hit_max_nr
+
+            # ── Q recompute at X_new ──
+            # build_system(X) returns Q(X), but X_new = X + delta. We need
+            # Q(X_new) for correct Q_prev on the next step acceptance. This
+            # second build_system call is the price of flattening — it replaces
+            # the lax.cond recompute from the nested solver. On GPU, both calls
+            # execute every tick (jnp.where semantics), but the total is still
+            # fewer calls than fori_loop (which runs max_nr_iters every step).
+            _, _, Q_at_X_new, I_vsource_recomp, limit_state_recomp, mrc_recomp = (
+                build_system_jit(
+                    X_new,
+                    vsource_vals,
+                    isource_vals,
+                    new_Q_prev,
+                    integ_c0,
+                    device_arrays,
+                    gmin,
+                    gshunt,
+                    integ_c1,
+                    integ_d1,
+                    new_dQdt_prev,
+                    integ_c2,
+                    new_Q_prev2,
+                    limit_state_new,
+                    new_nr_iter + 1,
+                )
+            )
+
+            return (
+                X_new,
+                Q_at_X_new,
+                new_Q_prev,
+                new_dQdt_prev,
+                new_Q_prev2,
+                new_step,
+                new_nr_iter + 1,
+                this_converged,
+                new_t_out,
+                new_v_out,
+                new_i_out,
+                new_total_nr,
+                limit_state_new,
+                I_vsource_recomp,
+                mrc_recomp,
+            )
+
+        # Cache and JIT
+        flat_cache_key = (
+            "flattened", n_steps, n_total, n_unknowns, n_external, n_vsources, dtype
+        )
+
+        if flat_cache_key not in self._jit_run_while_cache:
+            MAX_JIT_CACHE_SIZE = 8
+            if len(self._jit_run_while_cache) >= MAX_JIT_CACHE_SIZE:
+                oldest_key = next(iter(self._jit_run_while_cache))
+                del self._jit_run_while_cache[oldest_key]
+
+            @jax.jit
+            def run_flattened(state):
+                return lax.while_loop(cond_fn, body_fn, state)
+
+            self._jit_run_while_cache[flat_cache_key] = run_flattened
+            logger.debug(
+                f"{self.name}: Created flattened while_loop JIT runner "
+                f"for {n_steps} steps"
+            )
+
+        run_flattened = self._jit_run_while_cache[flat_cache_key]
+
+        # Run simulation
+        logger.info(
+            f"{self.name}: Starting flattened simulation ({n_steps} steps, "
+            f"dt={dt:.2e}s, {'sparse' if self.use_sparse else 'dense'})"
+        )
+        t_start = time_module.perf_counter()
+
+        final_state = run_flattened(init_loop_state)
+
+        # Block until computation completes
+        final_state[8].block_until_ready()  # times_out
+        wall_time = time_module.perf_counter() - t_start
+
+        # Unpack final state
+        (
+            _, _, _, _, _,
+            final_step, final_nr_iter, _,
+            times_final, V_out_final, I_out_final,
+            total_nr_final, _, _, _,
+        ) = final_state
+
+        # The total_nr counter accumulates on step acceptance; add the
+        # final in-flight NR iterations for the last accepted step
+        total_nr_final = total_nr_final + final_nr_iter
+
+        actual_steps = n_steps + 1  # including initial condition
+        setup = self.ensure_setup()
+
+        # Build node name -> column index mapping
+        node_indices: Dict[str, int] = {}
+        for name, idx in self.runner.node_names.items():
+            if 0 < idx < n_external:
+                node_indices[name] = idx
+
+        current_indices: Dict[str, int] = {}
+        if setup.branch_data and n_vsources > 0:
+            current_indices = dict(setup.branch_data.name_to_idx)
+
+        stats = {
+            "n_steps": actual_steps,
+            "total_timesteps": actual_steps,
+            "accepted_steps": n_steps,
+            "rejected_steps": 0,
+            "total_nr_iterations": int(total_nr_final),
+            "avg_nr_iterations": float(total_nr_final) / max(n_steps, 1),
+            "wall_time": wall_time,
+            "time_per_step_ms": wall_time / n_steps * 1000 if n_steps > 0 else 0,
+            "min_dt_used": dt,
+            "max_dt_used": dt,
+            "convergence_rate": 1.0,
+            "strategy": "flattened_step_full_mna",
+            "solver": "sparse" if self.use_sparse else "dense",
+            "V_out": V_out_final,
+            "I_out": I_out_final,
+            "node_indices": node_indices,
+            "current_indices": current_indices,
+            "fixed_step": True,
+            "flattened": True,
+        }
+
+        logger.info(
+            f"{self.name}: Flattened completed {n_steps} steps in {wall_time:.3f}s "
             f"({stats['time_per_step_ms']:.2f}ms/step, "
             f"total NR iters={int(total_nr_final)})"
         )

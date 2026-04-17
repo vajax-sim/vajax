@@ -29,6 +29,10 @@ on:
         description: 'Use fixed-step transient (no adaptive dt, full GPU fusion)'
         type: boolean
         default: false
+      flattened_loop:
+        description: 'Flatten timestep+NR into single while_loop (no nested kWhile/kConditional)'
+        type: boolean
+        default: false
       cmdbuf_mode:
         description: 'Command buffer mode (which ops to capture into cmdbufs)'
         type: choice
@@ -171,6 +175,9 @@ jobs:
           if [ "${{ inputs.fixed_step }}" = "true" ]; then
             EXTRA_FLAGS="$EXTRA_FLAGS --fixed-step"
           fi
+          if [ "${{ inputs.flattened_loop }}" = "true" ]; then
+            EXTRA_FLAGS="$EXTRA_FLAGS --flattened-loop"
+          fi
 
           # Build XLA_FLAGS based on cmdbuf_mode input.
           BASE_XLA_FLAGS="--xla_gpu_autotune_level=0 --xla_dump_to=/tmp/hlo_dump --xla_dump_hlo_as_text=true"
@@ -211,6 +218,7 @@ jobs:
           echo "Sparse: ${{ inputs.sparse }}"
           echo "fori_loop: ${{ inputs.fori_loop }}"
           echo "fixed_step: ${{ inputs.fixed_step }}"
+          echo "flattened_loop: ${{ inputs.flattened_loop }}"
           echo "cmdbuf_mode: ${{ inputs.cmdbuf_mode }}"
           echo "verbose_xla: ${{ inputs.verbose_xla }}"
           echo "Commit: ${{ github.sha }}"

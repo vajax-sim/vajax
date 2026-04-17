@@ -144,6 +144,14 @@ class SimulationOptions:
     - Ideal for well-behaved circuits where convergence is reliable
     Auto-enabled on Metal when use_fori_loop is True."""
 
+    flattened_loop: bool = False
+    """Flatten the nested timestep+NR loops into a single lax.while_loop.
+    Eliminates the inner kWhile thunk (NR loop) and kConditional thunk
+    (iter_zero_converged recompute), reducing host↔GPU syncs from ~38/step
+    to ~1/NR-iteration. Requires fixed_step_transient=True. Only works
+    with the dense solver backend (components must be exposed on nr_solve).
+    Set VAJAX_FLATTENED_LOOP=1 to enable via environment variable."""
+
     # Homotopy chain control
     op_homotopy: Tuple[str, ...] = ("gdev", "gshunt", "src")
     """Homotopy algorithms to try (in order) when plain OP fails."""

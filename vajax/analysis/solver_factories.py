@@ -911,7 +911,7 @@ def make_dense_full_mna_solver(
         f"Creating dense full MNA solver: V({n_nodes}) + I({n_vsources}), "
         f"NOI: {noi_indices is not None}, precision={solver_label}"
     )
-    return _make_nr_solver_common(
+    nr_solve = _make_nr_solver_common(
         build_system_jit=build_system_jit,
         n_nodes=n_nodes,
         n_vsources=n_vsources,
@@ -929,6 +929,29 @@ def make_dense_full_mna_solver(
         use_fori_loop=use_fori_loop,
         max_nr_iters=max_nr_iters,
     )
+
+    # Expose components for flattened single-while transient loop.
+    # The flattened loop inlines NR iterations into the timestep loop body,
+    # eliminating the nested kWhile thunk and its per-iteration host sync.
+    nr_solve.build_system_jit = build_system_jit
+    nr_solve.linear_solve_fn = linear_solve
+    nr_solve.enforce_noi_fn = enforce_noi
+    nr_solve.noi_indices = noi_indices
+    nr_solve.residual_mask = residual_mask
+    nr_solve.residual_conv_mask = residual_conv_mask
+    nr_solve.n_nodes = n_nodes
+    nr_solve.n_vsources = n_vsources
+    nr_solve.total_limit_states = total_limit_states
+    nr_solve.nr_config = {
+        "nr_damping": options.nr_damping if options else 1.0,
+        "vntol": options.vntol if options else 1e-6,
+        "reltol": options.reltol if options else 1e-3,
+        "abstol": abstol,
+        "max_step": max_step,
+        "max_nr_iters": max_nr_iters or min(max_iterations, 8),
+    }
+
+    return nr_solve
 
 
 def make_spineax_full_mna_solver(
